@@ -442,79 +442,28 @@ function notice(msg){
 //  FETCH & PARSE CSV
 // ═══════════════════════════════════════════════════════════
 async function fetchCSV(){
-  const url=document.getElementById('sheetUrl').value.trim();
-  if(!url){notice('Please paste your Google Sheet published CSV URL above.');return false;}
   setStatus('loading','Fetching live data from Google Sheets…');
-
-  // Manual timeout wrapper — avoids AbortSignal.timeout() browser compatibility issues
-  const fetchWithTimeout=(fetchUrl,ms=15000)=>Promise.race([
-    fetch(fetchUrl),
-    new Promise((_,rej)=>setTimeout(()=>rej(new Error('Timeout')),ms))
-  ]);
-
-  // Multiple proxy strategies — tries each until one works
-  const strategies=[
-    // Strategy 1: allorigins JSON wrapper
-    async()=>{
-      const r=await fetchWithTimeout(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
-      const j=await r.json();
-      if(j.contents&&j.contents.length>200) return j.contents;
-      throw new Error('Empty response');
-    },
-    // Strategy 2: corsproxy.io direct
-    async()=>{
-      const r=await fetchWithTimeout(`https://corsproxy.io/?${encodeURIComponent(url)}`);
-      const t=await r.text();
-      if(t&&t.length>200) return t;
-      throw new Error('Empty response');
-    },
-    // Strategy 3: allorigins raw
-    async()=>{
-      const r=await fetchWithTimeout(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`);
-      const t=await r.text();
-      if(t&&t.length>200) return t;
-      throw new Error('Empty response');
-    },
-    // Strategy 4: thingproxy
-    async()=>{
-      const r=await fetchWithTimeout(`https://thingproxy.freeboard.io/fetch/${url}`);
-      const t=await r.text();
-      if(t&&t.length>200) return t;
-      throw new Error('Empty response');
-    },
-    // Strategy 5: htmldriven
-    async()=>{
-      const r=await fetchWithTimeout(`https://cors.eu.org/${url}`);
-      const t=await r.text();
-      if(t&&t.length>200) return t;
-      throw new Error('Empty response');
-    },
-    // Strategy 6: no-cors-proxy
-    async()=>{
-      const r=await fetchWithTimeout(`https://nocors.org/fetch?url=${encodeURIComponent(url)}`);
-      const t=await r.text();
-      if(t&&t.length>200) return t;
-      throw new Error('Empty response');
+  try{
+    const res=await fetch('/api/sheet');
+    const text=await res.text();
+    if(!res.ok){
+      console.error('Sheet proxy error:',text);
+      throw new Error(text);
     }
-  ];
-
-  for(let i=0;i<strategies.length;i++){
-    try{
-      setStatus('loading',`Trying data source ${i+1} of ${strategies.length}…`);
-      const csv=await strategies[i]();
-      parseAndProcess(csv);
-      return true;
-    }catch(e){
-      console.warn(`Strategy ${i+1} failed:`,e.message);
+    // If backend sent JSON error, surface it
+    if(text.trim().startsWith('{')){
+      const j=JSON.parse(text);
+      throw new Error(j.error||'Sheet API error');
     }
+    parseAndProcess(text);
+    return true;
+  }catch(e){
+    console.warn('Sheet fetch failed:',e);
+    notice('Live Google Sheets fetch failed via /api/sheet. Showing April benchmark simulation instead.');
+    setStatus('error','Using Apr 25 benchmarks — tap Refresh to retry');
+    APR=generateBenchmarkData();
+    return false;
   }
-
-  // All proxies failed — show benchmarks with explanation
-  notice('Live Google Sheets fetch is blocked by this browser/host. Dashboard showing April 2025 benchmarks. To fix: open this page in Chrome and try again, or use the direct link from your own device.');
-  setStatus('error','Using Apr 25 benchmarks — tap Refresh to retry');
-  // Load benchmark data so dashboard is not empty
-  APR=generateBenchmarkData();
-  return false;
 }
 
 // Generate synthetic benchmark rows so dashboard renders meaningfully even without live data
