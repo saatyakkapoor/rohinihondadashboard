@@ -369,7 +369,6 @@ const YEAR=TODAY.getFullYear();
 const SR=['Sec 3','Rithala','Budh Vihar','Karala'];
 const SRC={'Sec 3':'#378ADD','Rithala':'#00B67A','Budh Vihar':'#F5A623','Karala':'#D4537E'};
 const MC=['#378ADD','#00B67A','#F5A623','#D4537E','#7F77DD','#E8000D','#00C9B1','#FF6B35'];
-const GROQ_API_KEY="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";
 
 const T={
   sr:{'Sec 3':175,'Rithala':174,'Budh Vihar':133,'Karala':0},
@@ -1145,30 +1144,16 @@ Write 4 briefings clearly labeled:
 Be sharp. Use numbers. Call out showrooms and execs by name. No fluff.`;
 
   try{
-    // Use a CORS proxy so this works even from a plain file:// dashboard.
-    // Note: this sends the API key via the proxy; OK for your internal use case.
-    const res=await fetch('https://corsproxy.io/?https://api.groq.com/openai/v1/chat/completions',{
+    const res=await fetch('/api/ai',{
       method:'POST',
-      headers:{
-        'Content-Type':'application/json',
-        'Authorization':`Bearer ${GROQ_API_KEY}`
-      },
-      body:JSON.stringify({
-        model:'llama-3.3-70b-versatile',
-        temperature:0.3,
-        max_tokens:1200,
-        messages:[
-          {role:'system',content:'You are a sharp, numbers-driven executive briefing assistant for a Honda dealership dashboard.'},
-          {role:'user',content:prompt}
-        ]
-      })
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({prompt})
     });
-    if(!res.ok){
-      const errTxt=await res.text();
-      throw new Error(`Groq HTTP ${res.status}: ${errTxt.slice(0,200)}`);
-    }
     const data=await res.json();
-    const txt=data.choices?.[0]?.message?.content||'Unable to generate commentary.';
+    if(!res.ok||data.error){
+      throw new Error(data.error||`HTTP ${res.status}`);
+    }
+    const txt=data.text||'Unable to generate commentary.';
     const get=(tag,next)=>{const r=new RegExp(`\\[${tag}\\]([\\s\\S]*?)(?=\\[${next}\\]|$)`);return(txt.match(r)?.[1]||'').trim();};
     AI.daily=get('DAILY','WEEKLY');
     AI.weekly=get('WEEKLY','FORTNIGHT');
@@ -1177,7 +1162,7 @@ Be sharp. Use numbers. Call out showrooms and execs by name. No fluff.`;
     document.getElementById('aiBody').textContent=AI[activeAI]||AI.daily;
     document.getElementById('aiTs').textContent=`Generated ${new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})} IST`;
   }catch(e){
-    document.getElementById('aiBody').textContent=`⚠️ AI briefing unavailable. All dashboard data is live. Error: Failed to fetch from Groq (${e.message}). This is usually a network/CORS block in the browser.`;
+    document.getElementById('aiBody').textContent=`⚠️ AI briefing unavailable. All dashboard data is live. Error from /api/ai: ${e.message}`;
   }
 }
 
