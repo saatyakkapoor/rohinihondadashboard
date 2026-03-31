@@ -1,6 +1,6 @@
 export default async function handler(req, res) {
   const url =
-    "https://docs.google.com/spreadsheets/d/15AB4hbKxEZePHFU9lhzDFt6tO9ZSgVt7Vh9HXgYT2oc/export?format=csv&gid=0";
+    "https://docs.google.com/spreadsheets/d/e/2PACX-1vQWo5VW8-4m_6YKgSKHUC_59CvZKwxEFvyszMo3iaRlEXV6IMqmRTLXVgt0XrJX8OcvPcii3a0FUPL0/pub?output=csv";
 
   try {
     const response = await fetch(url, {
