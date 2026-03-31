@@ -9,14 +9,12 @@ export default async function handler(req, res) {
 
     const text = await response.text();
 
-    const ct = response.headers.get("content-type") || "";
-    const looksLikeHtml =
-      ct.includes("text/html") ||
-      text.startsWith("<!DOCTYPE html>") ||
-      text.toLowerCase().includes("accounts.google.com");
+    // Very minimal login-page detection: only fail if we clearly see a Google
+    // Accounts login marker in the body. Some public CSV exports may still use
+    // text/html as content-type, so we *cannot* rely on that header.
+    const looksLikeLogin = text.toLowerCase().includes("accounts.google.com");
 
-    // Only treat it as an error if it really looks like an HTML/login page.
-    if (looksLikeHtml) {
+    if (looksLikeLogin) {
       res.setHeader("Access-Control-Allow-Origin", "*");
       return res.status(500).json({
         error:
