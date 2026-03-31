@@ -410,13 +410,15 @@ const pDate=s=>{
   return m?new Date(+m[3],+m[2]-1,+m[1]):null;
 };
 const isY=v=>{if(!v) return false; const s=String(v).toLowerCase().trim(); return s==='yes'||s==='y'||s.includes('yes')||+v>0;};
-const getF=r=>r['Finance/Cash']||r['Finance / Cash']||r['Payment Type']||'';
+// Real sheet header uses "Cash or Finance" and "Financier Name"
+const getF=r=>r['Cash or Finance']||r['Finance/Cash']||r['Finance / Cash']||r['Payment Type']||'';
 const getZD=r=>r['Zero Dep']||r['Zero Depreciation']||r['Zero dep']||r['ZD']||'';
 const getEW=r=>r['EW']||r['Extended Warranty']||r['Extended Warr']||'';
-const getBank=r=>r['Bank Name']||r['Financier']||r['Mention Bank Name']||r['Finance Bank']||'';
+const getBank=r=>r['Financier Name']||r['Bank Name']||r['Financier']||r['Mention Bank Name']||r['Finance Bank']||'';
 const getSP=r=>r['Sales Executive Name']||r['Salesperson']||r['Sales Person']||'';
-const getExch=r=>r['Exchange']||r['Exchange Scheme']||r['Exchange (Yes/No)']||'';
-const getExchBy=r=>r['Exchanger']||r['Exchange Dealer']||r['Exchange Through']||'';
+// Real sheet: "Is vehicle sold under EXCHANGE SCHEME" + "Name of Exchanger"
+const getExch=r=>r['Is vehicle sold under EXCHANGE SCHEME']||r['Exchange']||r['Exchange Scheme']||r['Exchange (Yes/No)']||'';
+const getExchBy=r=>r['Name of Exchanger']||r['Exchanger']||r['Exchange Dealer']||r['Exchange Through']||'';
 const pct=(a,b)=>b?Math.round(a/b*100):0;
 const col=(p,lo,hi)=>p>=hi?'var(--green)':p>=lo?'var(--gold)':'var(--red)';
 const bCls=(p,lo,hi)=>p>=hi?'up':p>=lo?'nt':'dn';
@@ -1134,6 +1136,16 @@ TOP SALESPEOPLE: ${topSPs||'No data'}
 
 APR'25 ACTUALS: Sec 3:195 | Rithala:198 | BV:163 | Network:561
 APR'26 TARGETS: Sec 3:175 | Rithala:174 | BV:133 | Network:482 (10% growth basis)
+
+Use these 8 angles when you comment: 
+1) Finance penetration and financier mix by showroom and model. 
+2) Zero Dep and EW gaps by showroom and by top/bottom sales executives. 
+3) Accessories and profitability — average accessories billing, missing lines. 
+4) Discount discipline vs policy, especially on Activa 6G / Shine. 
+5) Exchange penetration, exchanger productivity and age/value of exchanged vehicles. 
+6) Salesperson league table with MTD, F1/F2, ZD/EW/finance/exchange %. 
+7) Model and variant mix vs the target plan. 
+8) Operational hygiene — pending shorts, promised dates, risky manager comments.
 
 Write 4 briefings clearly labeled:
 [DAILY] Today's snapshot — what's on track, what needs urgent attention. 4-5 lines.
