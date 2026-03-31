@@ -1,37 +1,41 @@
 export default async function handler(req, res) {
+  // Direct CSV export URL (already downloads as CSV when opened in browser)
   const url =
     "https://docs.google.com/spreadsheets/d/15AB4hbKxEZePHFU9lhzDFt6tO9ZSgVt7Vh9HXgYT2oc/export?format=csv&gid=0";
+
   try {
     const response = await fetch(url, {
-      // Avoid sending any cookies so Google treats this as an anonymous request
+      // Treat as a simple anonymous request
       redirect: "follow",
+      cache: "no-store",
     });
 
-    const text = await response.text();
-
-    // If Google returns a login page (HTML) instead of CSV, fail fast with a clear error
-    const ct = response.headers.get("content-type") || "";
-    const looksLikeHtml =
-      ct.includes("text/html") ||
-      text.startsWith("<!DOCTYPE html>") ||
-      text.toLowerCase().includes("accounts.google.com");
-
-    if (!response.ok || looksLikeHtml) {
+    if (!response.ok) {
       res.setHeader("Access-Control-Allow-Origin", "*");
-      res
+      return res
         .status(500)
-        .json({
-          error:
-            "Google Sheet is not publicly accessible as CSV. Please use 'File → Share → Publish to web' in Google Sheets and use the published CSV URL.",
-        });
-      return;
+        .json({ error: "Failed to fetch CSV from Google Sheets." });
     }
 
+    // Get raw bytes and forward as CSV so browser can download it
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
     res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Content-Type", "text/plain; charset=utf-8");
-    res.status(200).send(text);
+    res.setHeader(
+      "Content-Type",
+      response.headers.get("content-type") || "text/csv; charset=utf-8"
+    );
+    // Hint browser to download as a file instead of trying to render
+    res.setHeader(
+      "Content-Disposition",
+      'attachment; filename="sheet-export.csv"'
+    );
+
+    return res.status(200).send(buffer);
   } catch (e) {
-    res
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    return res
       .status(500)
       .json({ error: "Error fetching Sheet: " + (e.message || String(e)) });
   }
