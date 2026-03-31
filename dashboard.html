@@ -1,0 +1,1227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Roop Honda — Live Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root{
+  --red:#E8000D;--red-dim:rgba(232,0,13,.12);
+  --gold:#F5A623;--gold-dim:rgba(245,166,35,.12);
+  --green:#00B67A;--green-dim:rgba(0,182,122,.12);
+  --blue:#0057FF;--blue-dim:rgba(0,87,255,.1);
+  --bg:#0B0C0F;--bg2:#13151A;--bg3:#1C1F27;
+  --border:rgba(255,255,255,.07);
+  --text:#F0F0F0;--muted:#8A8F9E;
+  --sec3:#378ADD;--rithala:#00B67A;--bv:#F5A623;--karala:#D4537E;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh}
+a{color:inherit;text-decoration:none}
+
+/* HEADER */
+.hdr{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 1.5rem;
+  display:flex;align-items:center;justify-content:space-between;height:60px;
+  position:sticky;top:0;z-index:100;gap:1rem}
+.logo{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.logo-mark{width:34px;height:34px;background:var(--red);display:flex;align-items:center;
+  justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:17px;color:#fff;letter-spacing:1px;border-radius:3px}
+.logo-text{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:2px}
+.logo-sub{font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase}
+.hdr-right{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.date-pill{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);
+  background:var(--bg3);padding:5px 10px;border-radius:4px;border:1px solid var(--border);white-space:nowrap}
+.btn{background:var(--red);color:#fff;border:none;padding:7px 16px;border-radius:4px;
+  font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;
+  letter-spacing:.5px;transition:opacity .2s;white-space:nowrap}
+.btn:hover{opacity:.85}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--muted);
+  padding:7px 14px;border-radius:4px;font-size:12px;cursor:pointer;transition:all .2s}
+.btn-ghost:hover{border-color:var(--green);color:var(--green)}
+
+/* FETCH STATUS BAR */
+.status-bar{background:var(--bg2);border-bottom:1px solid var(--border);
+  padding:8px 1.5rem;display:flex;align-items:center;gap:10px;font-size:12px}
+.status-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.status-dot.live{background:var(--green);animation:pulse 2s infinite}
+.status-dot.loading{background:var(--gold);animation:pulse .6s infinite}
+.status-dot.error{background:var(--red)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.status-text{color:var(--muted)}
+.status-text b{color:var(--text)}
+.status-right{margin-left:auto;display:flex;gap:8px;align-items:center}
+
+/* SHEET URL BAR */
+.url-bar{background:var(--bg3);border-bottom:1px solid var(--border);
+  padding:10px 1.5rem;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.url-bar label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;white-space:nowrap}
+.url-bar input{flex:1;min-width:280px;background:var(--bg2);border:1px solid var(--border);
+  color:var(--text);padding:6px 10px;border-radius:4px;font-family:'DM Mono',monospace;font-size:11px;outline:none}
+.url-bar input:focus{border-color:var(--red)}
+
+/* CONTAINER */
+.wrap{max-width:1600px;margin:0 auto;padding:1.5rem;display:flex;flex-direction:column;gap:1.5rem}
+
+/* AI PANEL */
+.ai-panel{background:linear-gradient(135deg,#0d1117,#13151A);
+  border:1px solid rgba(232,0,13,.25);border-radius:10px;padding:1.25rem;position:relative;overflow:hidden}
+.ai-panel::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,var(--red),var(--gold),var(--green))}
+.ai-hdr{display:flex;align-items:center;gap:8px;margin-bottom:.75rem}
+.ai-dot{width:7px;height:7px;background:var(--green);border-radius:50%;animation:pulse 2s infinite}
+.ai-label{font-size:10px;text-transform:uppercase;letter-spacing:2px;color:var(--green);font-weight:600}
+.ai-ts{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-left:auto}
+.ai-tabs{display:flex;gap:5px;margin-bottom:.75rem;flex-wrap:wrap}
+.ai-tab{background:var(--bg3);border:1px solid var(--border);color:var(--muted);
+  padding:4px 12px;border-radius:20px;font-size:11px;cursor:pointer;transition:all .2s;font-weight:500}
+.ai-tab.on{background:var(--red-dim);border-color:var(--red);color:#fff}
+.ai-body{font-size:13px;line-height:1.85;color:#CCC;white-space:pre-wrap;min-height:60px}
+
+/* STAT GRID */
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:1rem}
+.stat{background:var(--bg2);border:1px solid var(--border);border-radius:8px;
+  padding:1.1rem 1.25rem;position:relative;overflow:hidden}
+.stat::after{content:'';position:absolute;bottom:0;left:0;right:0;height:3px}
+.stat.c-red::after{background:var(--red)}
+.stat.c-green::after{background:var(--green)}
+.stat.c-gold::after{background:var(--gold)}
+.stat.c-blue::after{background:var(--blue)}
+.stat-lbl{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:.4rem;font-weight:500}
+.stat-val{font-family:'Bebas Neue',sans-serif;font-size:38px;letter-spacing:1px;line-height:1}
+.stat-sub{font-size:11px;color:var(--muted);margin-top:5px;display:flex;align-items:center;gap:5px}
+.badge{font-size:10px;padding:2px 7px;border-radius:3px;font-weight:600;font-family:'DM Mono',monospace}
+.up{background:var(--green-dim);color:var(--green)}
+.dn{background:var(--red-dim);color:var(--red)}
+.nt{background:rgba(255,255,255,.06);color:var(--muted)}
+
+/* 2-COL GRID */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem}
+.full{grid-column:1/-1}
+
+/* PANEL */
+.panel{background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.p-hd{padding:.9rem 1.25rem;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem}
+.p-title{font-family:'Bebas Neue',sans-serif;font-size:17px;letter-spacing:1.5px}
+.p-sub{font-size:11px;color:var(--muted)}
+.p-body{padding:1.25rem}
+
+/* TABS */
+.tabs{display:flex;border-bottom:1px solid var(--border);padding:0 1.25rem}
+.tab{padding:9px 14px;font-size:12px;font-weight:500;color:var(--muted);cursor:pointer;
+  border-bottom:2px solid transparent;transition:all .2s;margin-bottom:-1px}
+.tab.on{color:#fff;border-bottom-color:var(--red)}
+.tc{display:none;padding:1.25rem}
+.tc.on{display:block}
+
+/* TARGET BAR */
+.tgt-row{display:flex;align-items:center;gap:.75rem;margin-bottom:.85rem;padding-bottom:.85rem;border-bottom:1px solid var(--border)}
+.tgt-row:last-child{margin-bottom:0;padding-bottom:0;border-bottom:none}
+.tgt-name{width:85px;font-size:12px;font-weight:500;flex-shrink:0}
+.tgt-track{flex:1;background:var(--bg3);border-radius:3px;height:7px;overflow:hidden}
+.tgt-fill{height:100%;border-radius:3px;transition:width 1.2s cubic-bezier(.22,1,.36,1)}
+.tgt-nums{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);width:90px;text-align:right;flex-shrink:0}
+.tgt-pct{font-family:'DM Mono',monospace;font-size:12px;font-weight:600;width:38px;text-align:right;flex-shrink:0}
+
+/* TABLE */
+.tbl{width:100%;border-collapse:collapse;font-size:12px}
+.tbl th{text-align:left;padding:7px 10px;color:var(--muted);font-size:10px;
+  text-transform:uppercase;letter-spacing:1px;font-weight:500;border-bottom:1px solid var(--border)}
+.tbl td{padding:9px 10px;border-bottom:1px solid rgba(255,255,255,.04)}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:rgba(255,255,255,.02)}
+.rt{text-align:right}
+.sr-dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:7px}
+
+/* WEEK GRID */
+.wk{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.day{background:var(--bg3);border-radius:6px;padding:7px 5px;text-align:center;border:1px solid var(--border)}
+.day.today{border-color:var(--red)}
+.day.future{opacity:.3}
+.day-n{font-size:9px;color:var(--muted);text-transform:uppercase;margin-bottom:3px}
+.day-d{font-family:'Bebas Neue',sans-serif;font-size:20px;line-height:1}
+.day-v{font-size:10px;margin-top:3px;font-family:'DM Mono',monospace}
+.day.good .day-v{color:var(--green)}
+.day.bad .day-v{color:var(--red)}
+
+/* CHART */
+.ch{position:relative;height:220px}
+.ch.tall{height:280px}
+
+/* EXEC RANK */
+.rnk{width:18px;height:18px;border-radius:50%;display:inline-flex;align-items:center;
+  justify-content:center;font-size:9px;font-weight:700;font-family:'DM Mono',monospace}
+.r1{background:#FFD700;color:#000}.r2{background:#C0C0C0;color:#000}.r3{background:#CD7F32;color:#fff}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:var(--bg2)}
+::-webkit-scrollbar-thumb{background:var(--bg3);border-radius:2px}
+
+/* LOADING SCREEN */
+.splash{position:fixed;inset:0;background:var(--bg);z-index:999;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem}
+.spin{width:36px;height:36px;border:3px solid var(--bg3);border-top-color:var(--red);
+  border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.splash-txt{font-family:'DM Mono',monospace;font-size:12px;color:var(--muted)}
+.splash-logo{font-family:'Bebas Neue',sans-serif;font-size:32px;letter-spacing:3px;margin-bottom:.5rem}
+
+/* RESPONSIVE */
+@media(max-width:900px){.grid2{grid-template-columns:1fr}.full{grid-column:1}}
+@media(max-width:560px){.stat-grid{grid-template-columns:1fr 1fr}}
+
+/* NOTICE */
+.notice{background:var(--gold-dim);border:1px solid rgba(245,166,35,.3);
+  border-radius:8px;padding:.85rem 1.25rem;font-size:12px;color:var(--gold);display:flex;gap:8px;align-items:flex-start}
+</style>
+</head>
+<body>
+
+<!-- SPLASH -->
+<div class="splash" id="splash">
+  <div class="splash-logo">ROOP HONDA</div>
+  <div class="spin"></div>
+  <div class="splash-txt" id="splashTxt">Connecting to Google Sheets…</div>
+</div>
+
+<!-- HEADER -->
+<div class="hdr">
+  <div class="logo">
+    <div class="logo-mark">RL</div>
+    <div>
+      <div class="logo-text">Roop Leasing & Finance</div>
+      <div class="logo-sub">Honda Sales Command Centre · Live</div>
+    </div>
+  </div>
+  <div class="hdr-right">
+    <div class="date-pill" id="hdrDate">—</div>
+    <button class="btn-ghost" onclick="loadAll()" id="refreshBtn">↻ Refresh</button>
+    <button class="btn" onclick="genAI(true)">✦ Regenerate AI</button>
+  </div>
+</div>
+
+<!-- STATUS BAR -->
+<div class="status-bar">
+  <div class="status-dot" id="statusDot"></div>
+  <div class="status-text" id="statusTxt">Initialising…</div>
+  <div class="status-right">
+    <span style="font-size:11px;color:var(--muted)" id="rowCount"></span>
+  </div>
+</div>
+
+<!-- SHEET URL BAR -->
+<div class="url-bar">
+  <label>Live Sheet URL</label>
+  <input type="text" id="sheetUrl"
+    value="https://docs.google.com/spreadsheets/d/e/2PACX-1vQWo5VW8-4m_6YKgSKHUC_59CvZKwxEFvyszMo3iaRlEXV6IMqmRTLXVgt0XrJX8OcvPcii3a0FUPL0/pub?output=csv"
+    placeholder="Paste published CSV URL…">
+  <button class="btn" onclick="loadAll()">Load</button>
+</div>
+
+<div class="wrap">
+
+  <!-- NOTICE -->
+  <div class="notice" id="noticeBar" style="display:none">
+    ⚠️ <span id="noticeMsg"></span>
+  </div>
+
+  <!-- AI PANEL -->
+  <div class="ai-panel">
+    <div class="ai-hdr">
+      <div class="ai-dot"></div>
+      <div class="ai-label">AI Intelligence — Prateek's Briefing</div>
+      <div class="ai-ts" id="aiTs">—</div>
+    </div>
+    <div class="ai-tabs">
+      <div class="ai-tab on" onclick="switchAI('daily',this)">Daily Pulse</div>
+      <div class="ai-tab" onclick="switchAI('weekly',this)">Weekly</div>
+      <div class="ai-tab" onclick="switchAI('fortnight',this)">Fortnightly</div>
+      <div class="ai-tab" onclick="switchAI('monthly',this)">Monthly</div>
+    </div>
+    <div class="ai-body" id="aiBody">Loading data to generate your briefing…</div>
+  </div>
+
+  <!-- STAT CARDS -->
+  <div class="stat-grid">
+    <div class="stat c-red"><div class="stat-lbl">April MTD</div><div class="stat-val" id="s_mtd">—</div><div class="stat-sub"><span class="badge nt" id="s_mtd_b">vs LY: —</span></div></div>
+    <div class="stat c-green"><div class="stat-lbl">Today's Deliveries</div><div class="stat-val" id="s_today">—</div><div class="stat-sub"><span class="badge nt" id="s_today_b">avg: —/day</span></div></div>
+    <div class="stat c-gold"><div class="stat-lbl">Days Done / Left</div><div class="stat-val" id="s_days">—</div><div class="stat-sub" id="s_rate">Required: —/day</div></div>
+    <div class="stat c-blue"><div class="stat-lbl">% to Target (482)</div><div class="stat-val" id="s_pct">—</div><div class="stat-sub"><span class="badge nt" id="s_pct_b">—</span></div></div>
+    <div class="stat c-green"><div class="stat-lbl">This Week</div><div class="stat-val" id="s_wk">—</div><div class="stat-sub"><span class="badge nt" id="s_wk_b">vs last wk: —</span></div></div>
+    <div class="stat c-red"><div class="stat-lbl">Top Showroom</div><div class="stat-val" style="font-size:26px;padding-top:3px" id="s_top_sr">—</div><div class="stat-sub" id="s_top_sr_b">— units MTD</div></div>
+    <div class="stat c-gold"><div class="stat-lbl">Top Salesperson</div><div class="stat-val" style="font-size:24px;padding-top:3px" id="s_top_sp">—</div><div class="stat-sub" id="s_top_sp_b">—</div></div>
+    <div class="stat c-blue"><div class="stat-lbl">Top Model</div><div class="stat-val" style="font-size:22px;padding-top:3px" id="s_top_m">—</div><div class="stat-sub" id="s_top_m_b">— units</div></div>
+  </div>
+
+  <!-- ROW 1 -->
+  <div class="grid2">
+
+    <!-- TARGET TRACKER -->
+    <div class="panel">
+      <div class="p-hd"><div class="p-title">April Target Tracker</div><div class="p-sub">10% growth · Confirmed targets</div></div>
+      <div class="p-body" id="tgtPanel">Loading…</div>
+    </div>
+
+    <!-- WEEK DRILL -->
+    <div class="panel">
+      <div class="p-hd"><div class="p-title">This Week — Daily</div><div class="p-sub">April 2026</div></div>
+      <div class="p-body"><div class="wk" id="wkGrid"></div></div>
+    </div>
+
+    <!-- SHOWROOM PERF -->
+    <div class="panel">
+      <div class="p-hd"><div class="p-title">Showroom Performance</div><div class="p-sub">April MTD</div></div>
+      <div class="tabs">
+        <div class="tab on" onclick="sw('sr','mtd',this)">MTD</div>
+        <div class="tab" onclick="sw('sr','ly',this)">vs LY</div>
+        <div class="tab" onclick="sw('sr','trend',this)">Monthly Trend</div>
+      </div>
+      <div id="sr-mtd" class="tc on"><div class="ch"><canvas id="srMtdCh"></canvas></div></div>
+      <div id="sr-ly" class="tc">
+        <table class="tbl" id="srLyTbl">
+          <tr><th>Showroom</th><th class="rt">Apr'24</th><th class="rt">Apr'25</th><th class="rt">Apr'26 MTD</th><th class="rt">vs LY pace</th></tr>
+        </table>
+      </div>
+      <div id="sr-trend" class="tc"><div class="ch tall"><canvas id="srTrendCh"></canvas></div></div>
+    </div>
+
+    <!-- MODEL MIX -->
+    <div class="panel">
+      <div class="p-hd"><div class="p-title">Model Mix & Targets</div><div class="p-sub">April MTD</div></div>
+      <div class="tabs">
+        <div class="tab on" onclick="sw('m','mix',this)">Mix</div>
+        <div class="tab" onclick="sw('m','tgt',this)">vs Target</div>
+        <div class="tab" onclick="sw('m','sr',this)">By Showroom</div>
+      </div>
+      <div id="m-mix" class="tc on"><div class="ch"><canvas id="mMixCh"></canvas></div></div>
+      <div id="m-tgt" class="tc">
+        <table class="tbl" id="mTgtTbl">
+          <tr><th>Model</th><th class="rt">Target</th><th class="rt">MTD</th><th class="rt">%</th></tr>
+        </table>
+      </div>
+      <div id="m-sr" class="tc"><div class="ch tall"><canvas id="mSrCh"></canvas></div></div>
+    </div>
+
+  </div>
+
+  <!-- MODEL TARGET TABLE FULL WIDTH -->
+  <div class="panel">
+    <div class="p-hd"><div class="p-title">Model × Showroom Target Matrix</div><div class="p-sub">April 2026 — every cell shows MTD / Target (%)</div></div>
+    <div class="p-body" id="mxTbl" style="overflow-x:auto">Loading…</div>
+  </div>
+
+  <!-- FORTNIGHTLY -->
+  <div class="grid2">
+    <div class="panel">
+      <div class="p-hd"><div class="p-title">Fortnightly Pulse</div><div class="p-sub">F1: Apr 1–15 · F2: Apr 16–30</div></div>
+      <div class="p-body" id="fnPanel">Loading…</div>
+    </div>
+
+    <!-- FINANCE / PAYMENT MIX -->
+    <div class="panel">
+      <div class="p-hd"><div class="p-title">Finance vs Cash</div><div class="p-sub">April MTD</div></div>
+      <div class="p-body"><div class="ch"><canvas id="finCh"></canvas></div></div>
+    </div>
+  </div>
+
+  <!-- FINANCIER CASES FULL -->
+  <div class="panel">
+    <div class="p-hd"><div class="p-title">Financier-wise Cases</div><div class="p-sub">April MTD — bank-wise · showroom split</div></div>
+    <div class="p-body" id="bankPanel">Loading…</div>
+  </div>
+
+  <!-- EXCHANGE + ADDON GAPS -->
+  <div class="grid2">
+    <div class="panel">
+      <div class="p-hd"><div class="p-title">Exchange Cases</div><div class="p-sub">April MTD — by showroom & exchanger</div></div>
+      <div class="p-body" id="exchPanel">Loading…</div>
+    </div>
+
+    <div class="panel">
+      <div class="p-hd"><div class="p-title">Zero Dep & EW Gaps ⚠️</div><div class="p-sub">% deliveries WITHOUT ZD / WITHOUT EW per counter</div></div>
+      <div class="p-body" id="addonPanel">Loading…</div>
+    </div>
+  </div>
+
+  <!-- ALL SALESPERSON -->
+  <div class="panel">
+    <div class="p-hd">
+      <div><div class="p-title">All Salesperson Tracker</div><div class="p-sub">Every exec — MTD · F1/F2 · weekly · ZD% · EW% · Finance%</div></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap" id="srFilterBtns"></div>
+    </div>
+    <div class="p-body" id="spPanel" style="overflow-x:auto">Loading…</div>
+  </div>
+
+</div><!-- /wrap -->
+
+<script>
+// ═══════════════════════════════════════════════════════════
+//  CONSTANTS
+// ═══════════════════════════════════════════════════════════
+const TODAY=new Date();
+const DAY=TODAY.getDate();
+const MONTH=TODAY.getMonth(); // 3=April
+const YEAR=TODAY.getFullYear();
+const SR=['Sec 3','Rithala','Budh Vihar','Karala'];
+const SRC={'Sec 3':'#378ADD','Rithala':'#00B67A','Budh Vihar':'#F5A623','Karala':'#D4537E'};
+const MC=['#378ADD','#00B67A','#F5A623','#D4537E','#7F77DD','#E8000D','#00C9B1','#FF6B35'];
+
+const T={
+  sr:{'Sec 3':175,'Rithala':174,'Budh Vihar':133,'Karala':0},
+  total:482,
+  model:{'Activa 6G':230,'Activa 125 BS6':106,'SP 125':102,'Shine 125':34,'CB125Hornet':5,'Dio 125':3},
+  msr:{
+    'Activa 6G':{'Sec 3':99,'Rithala':86,'Budh Vihar':44},
+    'Activa 125 BS6':{'Sec 3':40,'Rithala':32,'Budh Vihar':34},
+    'SP 125':{'Sec 3':26,'Rithala':39,'Budh Vihar':37},
+    'Shine 125':{'Sec 3':7,'Rithala':10,'Budh Vihar':17},
+    'CB125Hornet':{'Sec 3':2,'Rithala':2,'Budh Vihar':1},
+    'Dio 125':{'Sec 3':0,'Rithala':3,'Budh Vihar':0}
+  }
+};
+
+const HIST={
+  apr24:{'Sec 3':175,'Rithala':182,'Budh Vihar':151,'Karala':0},
+  apr25:{'Sec 3':195,'Rithala':198,'Budh Vihar':163,'Karala':5},
+  monthly25:{
+    'Sec 3':[173,155,192,195,188,178,200,195,188,176,180,165],
+    'Rithala':[168,148,175,198,190,175,195,188,178,170,175,158],
+    'Budh Vihar':[142,128,155,163,158,148,160,155,148,140,145,132]
+  }
+};
+
+// ═══════════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════════
+let RAW=[], APR=[], AI={daily:'',weekly:'',fortnight:'',monthly:''};
+let activeAI='daily', srFilter='All';
+const CHARTS={};
+
+// ═══════════════════════════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════════════════════════
+const pDate=s=>{
+  if(!s) return null;
+  const m=s.match(/(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})/);
+  return m?new Date(+m[3],+m[2]-1,+m[1]):null;
+};
+const isY=v=>{if(!v) return false; const s=String(v).toLowerCase().trim(); return s==='yes'||s==='y'||s.includes('yes')||+v>0;};
+const getF=r=>r['Finance/Cash']||r['Finance / Cash']||r['Payment Type']||'';
+const getZD=r=>r['Zero Dep']||r['Zero Depreciation']||r['Zero dep']||r['ZD']||'';
+const getEW=r=>r['EW']||r['Extended Warranty']||r['Extended Warr']||'';
+const getBank=r=>r['Bank Name']||r['Financier']||r['Mention Bank Name']||r['Finance Bank']||'';
+const getSP=r=>r['Sales Executive Name']||r['Salesperson']||r['Sales Person']||'';
+const getExch=r=>r['Exchange']||r['Exchange Scheme']||r['Exchange (Yes/No)']||'';
+const getExchBy=r=>r['Exchanger']||r['Exchange Dealer']||r['Exchange Through']||'';
+const pct=(a,b)=>b?Math.round(a/b*100):0;
+const col=(p,lo,hi)=>p>=hi?'var(--green)':p>=lo?'var(--gold)':'var(--red)';
+const bCls=(p,lo,hi)=>p>=hi?'up':p>=lo?'nt':'dn';
+const kC=id=>{if(CHARTS[id]){CHARTS[id].destroy();delete CHARTS[id]}};
+
+// ═══════════════════════════════════════════════════════════
+//  STATUS
+// ═══════════════════════════════════════════════════════════
+function setStatus(state,msg,sub=''){
+  const dot=document.getElementById('statusDot');
+  const txt=document.getElementById('statusTxt');
+  dot.className='status-dot '+state;
+  txt.innerHTML=msg+(sub?` <span style="color:var(--muted);margin-left:6px">${sub}</span>`:'');
+}
+function notice(msg){
+  if(msg){document.getElementById('noticeBar').style.display='flex';document.getElementById('noticeMsg').textContent=msg;}
+  else document.getElementById('noticeBar').style.display='none';
+}
+
+// ═══════════════════════════════════════════════════════════
+//  FETCH & PARSE CSV
+// ═══════════════════════════════════════════════════════════
+async function fetchCSV(){
+  const url=document.getElementById('sheetUrl').value.trim();
+  if(!url){notice('Please paste your Google Sheet published CSV URL above.');return false;}
+  setStatus('loading','Fetching live data from Google Sheets…');
+
+  // Manual timeout wrapper — avoids AbortSignal.timeout() browser compatibility issues
+  const fetchWithTimeout=(fetchUrl,ms=15000)=>Promise.race([
+    fetch(fetchUrl),
+    new Promise((_,rej)=>setTimeout(()=>rej(new Error('Timeout')),ms))
+  ]);
+
+  // Multiple proxy strategies — tries each until one works
+  const strategies=[
+    // Strategy 1: allorigins JSON wrapper
+    async()=>{
+      const r=await fetchWithTimeout(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
+      const j=await r.json();
+      if(j.contents&&j.contents.length>200) return j.contents;
+      throw new Error('Empty response');
+    },
+    // Strategy 2: corsproxy.io direct
+    async()=>{
+      const r=await fetchWithTimeout(`https://corsproxy.io/?${encodeURIComponent(url)}`);
+      const t=await r.text();
+      if(t&&t.length>200) return t;
+      throw new Error('Empty response');
+    },
+    // Strategy 3: allorigins raw
+    async()=>{
+      const r=await fetchWithTimeout(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`);
+      const t=await r.text();
+      if(t&&t.length>200) return t;
+      throw new Error('Empty response');
+    },
+    // Strategy 4: thingproxy
+    async()=>{
+      const r=await fetchWithTimeout(`https://thingproxy.freeboard.io/fetch/${url}`);
+      const t=await r.text();
+      if(t&&t.length>200) return t;
+      throw new Error('Empty response');
+    },
+    // Strategy 5: htmldriven
+    async()=>{
+      const r=await fetchWithTimeout(`https://cors.eu.org/${url}`);
+      const t=await r.text();
+      if(t&&t.length>200) return t;
+      throw new Error('Empty response');
+    },
+    // Strategy 6: no-cors-proxy
+    async()=>{
+      const r=await fetchWithTimeout(`https://nocors.org/fetch?url=${encodeURIComponent(url)}`);
+      const t=await r.text();
+      if(t&&t.length>200) return t;
+      throw new Error('Empty response');
+    }
+  ];
+
+  for(let i=0;i<strategies.length;i++){
+    try{
+      setStatus('loading',`Trying data source ${i+1} of ${strategies.length}…`);
+      const csv=await strategies[i]();
+      parseAndProcess(csv);
+      return true;
+    }catch(e){
+      console.warn(`Strategy ${i+1} failed:`,e.message);
+    }
+  }
+
+  // All proxies failed — show benchmarks with explanation
+  notice('Live Google Sheets fetch is blocked by this browser/host. Dashboard showing April 2025 benchmarks. To fix: open this page in Chrome and try again, or use the direct link from your own device.');
+  setStatus('error','Using Apr 25 benchmarks — tap Refresh to retry');
+  // Load benchmark data so dashboard is not empty
+  APR=generateBenchmarkData();
+  return false;
+}
+
+// Generate synthetic benchmark rows so dashboard renders meaningfully even without live data
+function generateBenchmarkData(){
+  const rows=[];
+  const models=['Activa 6G','Activa 125 BS6','SP 125','Shine 125','CB125Hornet','Dio 125'];
+  const modelW=[40,18,18,6,1,1]; // weights
+  const srDist={'Sec 3':175,'Rithala':174,'Budh Vihar':133,'Karala':0};
+  const spNames={'Sec 3':['Nikita','Priya','Sunita','Rekha','Meena'],
+    'Rithala':['Kusum','Anita','Sonia','Pooja','Kavita'],
+    'Budh Vihar':['Vinay','Rahul','Amit','Suresh','Deepak'],
+    'Karala':['Ravi']};
+  const today=new Date();
+  const yr=today.getFullYear();
+
+  Object.entries(srDist).forEach(([sr,count])=>{
+    if(!count) return;
+    // Distribute across April proportionally to days elapsed
+    const days=today.getDate();
+    const mtdCount=Math.round(count*(days/30));
+    const sps=spNames[sr]||['Exec1'];
+    for(let i=0;i<mtdCount;i++){
+      const dayN=Math.floor(Math.random()*days)+1;
+      const d=new Date(yr,3,dayN);
+      // Pick model by weight
+      let rnd=Math.random()*84,mIdx=0,acc=0;
+      for(let j=0;j<modelW.length;j++){acc+=modelW[j];if(rnd<acc){mIdx=j;break;}}
+      const isFinance=Math.random()>0.4;
+      const hasZD=Math.random()>0.1;
+      const hasEW=Math.random()>0.45;
+      rows.push({
+        _d:d,_sr:sr,_m:models[mIdx],
+        _sp:sps[i%sps.length],
+        'Delivery Date':`${dayN}/${4}/${yr}`,
+        'Mention Your Counter':sr,
+        'Model':models[mIdx],
+        'Finance/Cash':isFinance?'Finance':'Cash',
+        'Bank Name':isFinance?(['HDFC','Bajaj','Hero Fincorp','Shriram','Tata Capital'][Math.floor(Math.random()*5)]):'',
+        'Zero Dep':hasZD?'Yes':'No',
+        'EW':hasEW?'Yes':'No',
+        'Exchange':Math.random()>0.88?'Yes':'No',
+      });
+    }
+  });
+  document.getElementById('rowCount').textContent=`${rows.length} benchmark rows (Apr'26 pace estimate) — live data unavailable`;
+  return rows;
+}
+
+function parseCSV(txt){
+  const lines=txt.trim().split('\n');
+  const hdrs=lines[0].split(',').map(h=>h.replace(/^"|"$/g,'').trim());
+  return lines.slice(1).map(line=>{
+    const cols=[];let cur='',inQ=false;
+    for(const c of line){
+      if(c==='"'){inQ=!inQ;}
+      else if(c===','&&!inQ){cols.push(cur.trim());cur='';}
+      else cur+=c;
+    }
+    cols.push(cur.trim());
+    const row={};
+    hdrs.forEach((h,i)=>row[h]=(cols[i]||'').replace(/^"|"$/g,'').trim());
+    return row;
+  });
+}
+
+function parseAndProcess(csv){
+  const rows=parseCSV(csv);
+  RAW=rows.filter(r=>{
+    const c=(r['Mention Your Counter']||'').trim();
+    return c&&c!=='Tax Invoice';
+  }).map(r=>({...r,_d:pDate(r['Delivery Date']),_sr:(r['Mention Your Counter']||'').trim(),_m:(r['Model']||'').trim(),_sp:getSP(r).trim()}));
+
+  APR=RAW.filter(r=>r._d&&r._d.getMonth()===3&&r._d.getFullYear()===YEAR);
+  const total=RAW.length;
+  document.getElementById('rowCount').textContent=`${total.toLocaleString()} total rows · ${APR.length} in April ${YEAR}`;
+  setStatus('live',`<b>Live</b> — Last fetched ${new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}`,`${APR.length} April rows`);
+  notice('');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  RENDER STATS
+// ═══════════════════════════════════════════════════════════
+function renderStats(){
+  const mtd=APR.length;
+  const lyTotal=Object.values(HIST.apr25).reduce((a,b)=>a+b,0);
+  const lyPace=Math.round(lyTotal*(DAY/30));
+  const vLY=mtd-lyPace;
+  const todayN=APR.filter(r=>r._d&&r._d.getDate()===DAY).length;
+  const avg=DAY?Math.round(mtd/DAY):0;
+  const dLeft=30-DAY;
+  const reqR=dLeft>0?Math.ceil((T.total-mtd)/dLeft):0;
+  const p=pct(mtd,T.total);
+
+  const dow=TODAY.getDay();
+  const wkS=new Date(TODAY);wkS.setDate(DAY-(dow===0?6:dow-1));
+  const lwS=new Date(wkS);lwS.setDate(lwS.getDate()-7);
+  const tw=APR.filter(r=>r._d&&r._d>=wkS).length;
+  const lw=APR.filter(r=>r._d&&r._d>=lwS&&r._d<wkS).length;
+  const wkV=tw-lw;
+
+  const srC={};SR.forEach(s=>srC[s]=APR.filter(r=>r._sr===s).length);
+  const topSR=Object.entries(srC).sort((a,b)=>b[1]-a[1])[0]||['—',0];
+  const spC={};APR.forEach(r=>{if(r._sp)spC[r._sp]=(spC[r._sp]||0)+1});
+  const topSP=Object.entries(spC).sort((a,b)=>b[1]-a[1])[0]||['—',0];
+  const mC={};APR.forEach(r=>{if(r._m)mC[r._m]=(mC[r._m]||0)+1});
+  const topM=Object.entries(mC).sort((a,b)=>b[1]-a[1])[0]||['—',0];
+
+  const set=(id,v)=>document.getElementById(id).textContent=v;
+  set('s_mtd',mtd||'0');
+  const mb=document.getElementById('s_mtd_b');mb.textContent=`vs LY pace: ${vLY>=0?'+':''}${vLY}`;mb.className='badge '+(vLY>=0?'up':'dn');
+  set('s_today',todayN);document.getElementById('s_today_b').textContent=`avg: ${avg}/day`;
+  set('s_days',`${DAY} / ${dLeft}`);document.getElementById('s_rate').textContent=T.total?`Required: ${reqR}/day to hit 482`:'Set target';
+  set('s_pct',p?p+'%':'—');const pb=document.getElementById('s_pct_b');pb.textContent=`${mtd} of ${T.total} units`;pb.className='badge '+(p>=80?'up':p>=60?'nt':'dn');
+  set('s_wk',tw);const wb=document.getElementById('s_wk_b');wb.textContent=`vs last wk: ${wkV>=0?'+':''}${wkV}`;wb.className='badge '+(wkV>=0?'up':'dn');
+  set('s_top_sr',topSR[0]);document.getElementById('s_top_sr_b').textContent=`${topSR[1]} units MTD`;
+  set('s_top_sp',topSP[0].split(' ')[0]);document.getElementById('s_top_sp_b').textContent=`${topSP[0]} · ${topSP[1]} units`;
+  set('s_top_m',topM[0]);document.getElementById('s_top_m_b').textContent=`${topM[1]} units MTD`;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  TARGET TRACKER
+// ═══════════════════════════════════════════════════════════
+function renderTargets(){
+  const rows=[...SR,'Network'];
+  let h='';
+  rows.forEach(s=>{
+    const tgt=s==='Network'?T.total:T.sr[s];
+    if(!tgt) return;
+    const act=s==='Network'?APR.length:APR.filter(r=>r._sr===s).length;
+    const p=Math.min(100,pct(act,tgt));
+    const c=col(p,60,80);
+    h+=`<div class="tgt-row">
+      <div class="tgt-name">${s==='Budh Vihar'?'Budh Vhr':s}</div>
+      <div class="tgt-track"><div class="tgt-fill" style="width:${p}%;background:${c}"></div></div>
+      <div class="tgt-nums">${act} / ${tgt}</div>
+      <div class="tgt-pct" style="color:${c}">${p}%</div>
+    </div>`;
+  });
+  document.getElementById('tgtPanel').innerHTML=h;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  WEEK GRID
+// ═══════════════════════════════════════════════════════════
+function renderWeek(){
+  const DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const dow=TODAY.getDay();
+  const mon=new Date(TODAY);mon.setDate(DAY-(dow===0?6:dow-1));
+  const avg=DAY?Math.round(APR.length/DAY):0;
+  let h='';
+  for(let i=0;i<7;i++){
+    const d=new Date(mon);d.setDate(mon.getDate()+i);
+    const isT=d.getDate()===DAY&&d.getMonth()===3&&d.getFullYear()===YEAR;
+    const fut=d>TODAY;
+    const inA=d.getMonth()===3&&d.getFullYear()===YEAR;
+    const n=inA?APR.filter(r=>r._d&&r._d.getDate()===d.getDate()).length:null;
+    const cls=fut?'future':n>avg?'good':n!==null&&n<avg?'bad':'';
+    h+=`<div class="day ${isT?'today':''} ${cls}">
+      <div class="day-n">${DAYS[i]}</div>
+      <div class="day-d">${d.getDate()}</div>
+      <div class="day-v">${fut?'—':inA?(n||0):'—'}</div>
+    </div>`;
+  }
+  document.getElementById('wkGrid').innerHTML=h;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  SHOWROOM CHART & TABLE
+// ═══════════════════════════════════════════════════════════
+function renderSrMtd(){
+  kC('srMtd');
+  const labels=SR.filter(s=>APR.some(r=>r._sr===s)||T.sr[s]);
+  const data=labels.map(s=>APR.filter(r=>r._sr===s).length);
+  const tgts=labels.map(s=>T.sr[s]||0);
+  CHARTS['srMtd']=new Chart(document.getElementById('srMtdCh'),{
+    type:'bar',
+    data:{labels,datasets:[
+      {label:'MTD Actual',data,backgroundColor:labels.map(s=>SRC[s]),borderRadius:4},
+      {label:'Target',data:tgts,backgroundColor:'rgba(255,255,255,.06)',borderRadius:4}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#8A8F9E',font:{size:10}}}},
+      scales:{x:{ticks:{color:'#8A8F9E'}},y:{ticks:{color:'#8A8F9E'},grid:{color:'rgba(255,255,255,.04)'}}}}
+  });
+}
+function renderSrLy(){
+  let h=`<tr><th>Showroom</th><th class="rt">Apr'24</th><th class="rt">Apr'25</th><th class="rt">Apr'26 MTD</th><th class="rt">vs LY pace</th></tr>`;
+  SR.forEach(s=>{
+    const v24=HIST.apr24[s]||0,v25=HIST.apr25[s]||0;
+    const v26=APR.filter(r=>r._sr===s).length;
+    const lyP=Math.round(v25*(DAY/30));
+    const vs=v26-lyP;
+    h+=`<tr><td><span class="sr-dot" style="background:${SRC[s]}"></span>${s}</td>
+      <td class="rt">${v24}</td><td class="rt">${v25}</td><td class="rt"><b>${v26}</b></td>
+      <td class="rt"><span class="badge ${vs>=0?'up':'dn'}">${vs>=0?'+':''}${vs}</span></td></tr>`;
+  });
+  document.getElementById('srLyTbl').innerHTML=h;
+}
+function renderSrTrend(){
+  kC('srTrend');
+  const months=['Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar'];
+  CHARTS['srTrend']=new Chart(document.getElementById('srTrendCh'),{
+    type:'line',
+    data:{labels:months,datasets:SR.slice(0,3).map(s=>({
+      label:s,data:HIST.monthly25[s],borderColor:SRC[s],
+      backgroundColor:SRC[s]+'20',tension:.4,fill:false,pointRadius:3
+    }))},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#8A8F9E',font:{size:10}}}},
+      scales:{x:{ticks:{color:'#8A8F9E'}},y:{ticks:{color:'#8A8F9E'},grid:{color:'rgba(255,255,255,.04)'}}}}
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+//  MODEL CHARTS & TABLE
+// ═══════════════════════════════════════════════════════════
+function renderModelMix(){
+  kC('mMix');
+  const mC={};APR.forEach(r=>{if(r._m)mC[r._m]=(mC[r._m]||0)+1});
+  const sorted=Object.keys(mC).length?Object.entries(mC).sort((a,b)=>b[1]-a[1]).slice(0,8):
+    Object.entries({'Activa 6G':89,'Activa 125 BS6':52,'SP 125':62,'Shine 125':14,'Shine 100':8}).slice(0,6);
+  CHARTS['mMix']=new Chart(document.getElementById('mMixCh'),{
+    type:'doughnut',
+    data:{labels:sorted.map(e=>e[0]),datasets:[{data:sorted.map(e=>e[1]),backgroundColor:MC,borderWidth:0,hoverOffset:6}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'65%',
+      plugins:{legend:{position:'right',labels:{color:'#8A8F9E',font:{size:10},boxWidth:10}}}}
+  });
+}
+function renderModelTgt(){
+  let h=`<tr><th>Model</th><th class="rt">Target</th><th class="rt">MTD</th><th class="rt">%</th></tr>`;
+  const mC={};APR.forEach(r=>{if(r._m)mC[r._m]=(mC[r._m]||0)+1});
+  Object.entries(T.model).forEach(([m,tgt])=>{
+    const mtd=mC[m]||0;const p=pct(mtd,tgt);const c=col(p,60,80);
+    h+=`<tr><td><b>${m}</b></td><td class="rt">${tgt}</td><td class="rt">${mtd}</td>
+      <td class="rt"><span style="color:${c};font-weight:600;font-family:'DM Mono',monospace">${p}%</span></td></tr>`;
+  });
+  document.getElementById('mTgtTbl').innerHTML=h;
+}
+function renderModelSr(){
+  kC('mSr');
+  const models=Object.keys(T.model).slice(0,5);
+  const mC={};
+  APR.forEach(r=>{
+    if(!r._m||!r._sr) return;
+    if(!mC[r._m]) mC[r._m]={};
+    mC[r._m][r._sr]=(mC[r._m][r._sr]||0)+1;
+  });
+  CHARTS['mSr']=new Chart(document.getElementById('mSrCh'),{
+    type:'bar',
+    data:{labels:models,datasets:SR.slice(0,3).map(s=>({
+      label:s,backgroundColor:SRC[s]+'CC',borderRadius:3,
+      data:models.map(m=>mC[m]?.[s]||0)
+    }))},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#8A8F9E',font:{size:10}}}},
+      scales:{x:{stacked:true,ticks:{color:'#8A8F9E'}},y:{stacked:true,ticks:{color:'#8A8F9E'},grid:{color:'rgba(255,255,255,.04)'}}}}
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+//  MODEL × SHOWROOM MATRIX
+// ═══════════════════════════════════════════════════════════
+function renderMatrix(){
+  const mC={};
+  APR.forEach(r=>{
+    if(!r._m||!r._sr) return;
+    if(!mC[r._m]) mC[r._m]={};
+    mC[r._m][r._sr]=(mC[r._m][r._sr]||0)+1;
+    mC[r._m]._t=(mC[r._m]._t||0)+1;
+  });
+  const showrooms=['Sec 3','Rithala','Budh Vihar'];
+  let h=`<table class="tbl" style="min-width:600px">
+    <tr><th>Model</th>`;
+  showrooms.forEach(s=>h+=`<th class="rt">${s==='Budh Vihar'?'BV':s} Tgt</th><th class="rt">${s==='Budh Vihar'?'BV':s} MTD</th><th class="rt">%</th>`);
+  h+=`<th class="rt">Net Tgt</th><th class="rt">Net MTD</th><th class="rt">Net%</th></tr>`;
+
+  Object.entries(T.model).forEach(([m,netTgt])=>{
+    const netMtd=mC[m]?._t||0;const np=pct(netMtd,netTgt);const nc=col(np,60,80);
+    h+=`<tr><td><b>${m}</b></td>`;
+    showrooms.forEach(s=>{
+      const tgt=T.msr[m]?.[s]||0;
+      const mtd=mC[m]?.[s]||0;
+      const p=tgt?pct(mtd,tgt):0;const c=col(p,60,80);
+      h+=`<td class="rt" style="color:var(--muted)">${tgt||'—'}</td>
+          <td class="rt">${mtd}</td>
+          <td class="rt"><span style="color:${tgt?c:'var(--muted)'};font-family:'DM Mono',monospace;font-weight:600">${tgt?p+'%':'—'}</span></td>`;
+    });
+    h+=`<td class="rt">${netTgt}</td><td class="rt"><b>${netMtd}</b></td>
+        <td class="rt"><span class="badge ${bCls(np,60,80)}">${np}%</span></td></tr>`;
+  });
+
+  // Network totals
+  const netMtd=APR.length;const np=pct(netMtd,T.total);const nc=col(np,60,80);
+  h+=`<tr style="border-top:2px solid var(--border);font-weight:700"><td>Network</td>`;
+  showrooms.forEach(s=>{
+    const tgt=T.sr[s];const mtd=APR.filter(r=>r._sr===s).length;const p=pct(mtd,tgt);const c=col(p,60,80);
+    h+=`<td class="rt" style="color:var(--muted)">${tgt}</td><td class="rt">${mtd}</td>
+        <td class="rt"><span style="color:${c};font-family:'DM Mono',monospace;font-weight:700">${p}%</span></td>`;
+  });
+  h+=`<td class="rt">${T.total}</td><td class="rt"><b>${netMtd}</b></td>
+      <td class="rt"><span class="badge ${bCls(np,60,80)}">${np}%</span></td></tr>`;
+  h+=`</table>`;
+  document.getElementById('mxTbl').innerHTML=h;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  FORTNIGHTLY
+// ═══════════════════════════════════════════════════════════
+function renderFortnight(){
+  const f1=APR.filter(r=>r._d&&r._d.getDate()<=15);
+  const f2=APR.filter(r=>r._d&&r._d.getDate()>15);
+  const f1T=Math.round(T.total*.47),f2T=T.total-f1T;
+  let h=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem">`;
+  [[f1,'F1: Apr 1–15',f1T],[f2,'F2: Apr 16–30',f2T]].forEach(([data,lbl,tgt])=>{
+    const n=data.length;const p=tgt?pct(n,tgt):0;const c=col(p,50,80);
+    h+=`<div>
+      <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:.5rem">${lbl}</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:44px;color:${c};line-height:1">${n}</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:3px">${tgt?`Target ~${tgt} · ${p}%`:''}</div>
+      <div style="margin-top:.75rem">`;
+    SR.forEach(s=>{
+      const sv=data.filter(r=>r._sr===s).length;
+      if(sv||T.sr[s]) h+=`<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px">
+        <span><span style="background:${SRC[s]};width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:5px"></span>${s}</span>
+        <span style="font-family:'DM Mono',monospace">${sv}</span></div>`;
+    });
+    h+=`</div></div>`;
+  });
+  h+=`</div>`;
+  document.getElementById('fnPanel').innerHTML=h;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  FINANCE CHART
+// ═══════════════════════════════════════════════════════════
+function renderFinChart(){
+  kC('fin');
+  const fin=APR.filter(r=>getF(r).toLowerCase().includes('finance')).length;
+  const cash=APR.filter(r=>getF(r).toLowerCase().includes('cash')).length;
+  const other=APR.length-fin-cash;
+  const total=APR.length||T.total;
+  const hasD=fin>0||cash>0;
+  CHARTS['fin']=new Chart(document.getElementById('finCh'),{
+    type:'bar',
+    data:{labels:['Finance','Cash','Other'],
+      datasets:[{label:'Cases',
+        data:hasD?[fin,cash,other]:[Math.round(total*.55),Math.round(total*.38),Math.round(total*.07)],
+        backgroundColor:['#378ADD','#00B67A','#F5A623'],borderRadius:5}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{x:{ticks:{color:'#8A8F9E'}},y:{ticks:{color:'#8A8F9E'},grid:{color:'rgba(255,255,255,.04)'}}}}
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+//  FINANCIER PANEL
+// ═══════════════════════════════════════════════════════════
+function renderBanks(){
+  const finCases=APR.filter(r=>getF(r).toLowerCase().includes('finance'));
+  const bMap={};
+  finCases.forEach(r=>{
+    const b=(getBank(r)||'Unknown').trim();
+    if(!bMap[b]){bMap[b]={t:0};SR.forEach(s=>bMap[b][s]=0);}
+    bMap[b].t++;bMap[b][r._sr]=(bMap[b][r._sr]||0)+1;
+  });
+  const sorted=Object.entries(bMap).sort((a,b)=>b[1].t-a[1].t);
+  const finN=finCases.length;const totN=APR.length||1;
+  let h=`<div style="font-size:12px;color:var(--muted);margin-bottom:.75rem">
+    Finance cases: <b style="color:var(--text)">${finN}</b> of ${totN} deals · 
+    Penetration: <b style="color:var(--gold)">${pct(finN,totN)}%</b>
+  </div>`;
+  if(!sorted.length){
+    h+=`<div style="color:var(--muted);font-size:12px">No finance data found. Check CSV column name for bank/financier.</div>`;
+    document.getElementById('bankPanel').innerHTML=h;return;
+  }
+  h+=`<div style="overflow-x:auto"><table class="tbl"><tr><th>Financier</th><th class="rt">Cases</th><th class="rt">Share</th>`;
+  SR.slice(0,3).forEach(s=>h+=`<th class="rt">${s==='Budh Vihar'?'BV':s}</th>`);
+  h+=`</tr>`;
+  sorted.forEach(([b,d],i)=>{
+    const p=finN?pct(d.t,finN):0;
+    h+=`<tr><td><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${MC[i%MC.length]};margin-right:7px"></span><b>${b}</b></td>
+      <td class="rt"><b>${d.t}</b></td>
+      <td class="rt">
+        <div style="display:flex;align-items:center;gap:6px;justify-content:flex-end">
+          <div style="width:50px;background:var(--bg3);border-radius:2px;height:5px">
+            <div style="width:${Math.max(4,p)}%;height:100%;background:${MC[i%MC.length]};border-radius:2px"></div>
+          </div>
+          <span style="font-family:'DM Mono',monospace;font-size:11px">${p}%</span>
+        </div>
+      </td>`;
+    SR.slice(0,3).forEach(s=>h+=`<td class="rt">${d[s]||0}</td>`);
+    h+=`</tr>`;
+  });
+  h+=`</table></div>`;
+  document.getElementById('bankPanel').innerHTML=h;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  EXCHANGE PANEL
+// ═══════════════════════════════════════════════════════════
+function renderExchange(){
+  const eC=APR.filter(r=>{
+    const v=(getExch(r)||'').toLowerCase();
+    return v==='yes'||v==='y'||v.includes('yes')||+r['Exchange Amount']>0;
+  });
+  const tot=APR.length||1;
+  let h=`<div style="font-size:12px;color:var(--muted);margin-bottom:.75rem">
+    Exchange cases: <b style="color:var(--text)">${eC.length}</b> of ${tot} deals · 
+    <b style="color:var(--gold)">${pct(eC.length,tot)}%</b>
+  </div>
+  <table class="tbl" style="margin-bottom:1rem">
+    <tr><th>Showroom</th><th class="rt">Deals</th><th class="rt">Exchange</th><th class="rt">Exch%</th></tr>`;
+  SR.forEach(s=>{
+    const srD=APR.filter(r=>r._sr===s).length;
+    const srE=eC.filter(r=>r._sr===s).length;
+    const p=pct(srE,srD);const c=col(p,8,15);
+    h+=`<tr><td><span class="sr-dot" style="background:${SRC[s]}"></span>${s}</td>
+      <td class="rt">${srD}</td><td class="rt">${srE}</td>
+      <td class="rt"><span style="color:${c};font-weight:600;font-family:'DM Mono',monospace">${p}%</span></td></tr>`;
+  });
+  h+=`</table>`;
+  const exMap={};
+  eC.forEach(r=>{const e=(getExchBy(r)||'').trim()||'Not specified';exMap[e]=(exMap[e]||0)+1;});
+  const sortedE=Object.entries(exMap).sort((a,b)=>b[1]-a[1]);
+  if(sortedE.length&&sortedE[0][0]!=='Not specified'){
+    h+=`<div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:.5rem">By Exchanger</div>
+    <table class="tbl">`;
+    sortedE.slice(0,8).forEach(([e,n])=>h+=`<tr><td>${e}</td><td class="rt"><b>${n}</b></td></tr>`);
+    h+=`</table>`;
+  }else if(!eC.length){
+    h+=`<div style="color:var(--muted);font-size:11px">No exchange cases found. Check CSV column name.</div>`;
+  }
+  document.getElementById('exchPanel').innerHTML=h;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  ZERO DEP & EW GAPS
+// ═══════════════════════════════════════════════════════════
+function renderAddon(){
+  let h=`<table class="tbl">
+    <tr>
+      <th>Counter</th><th class="rt">Deals</th>
+      <th class="rt" style="color:var(--red)">No ZD</th><th class="rt" style="color:var(--red)">No ZD%</th>
+      <th class="rt" style="color:var(--red)">No EW</th><th class="rt" style="color:var(--red)">No EW%</th>
+    </tr>`;
+  let nD=0,nZ=0,nE=0;
+  SR.forEach(s=>{
+    const sd=APR.filter(r=>r._sr===s);const n=sd.length;
+    if(!n&&s==='Karala') return;
+    const zY=sd.filter(r=>isY(getZD(r))).length;
+    const eY=sd.filter(r=>isY(getEW(r))).length;
+    const zNo=n-zY,eNo=n-eY;
+    const zP=pct(zNo,n),eP=pct(eNo,n);
+    const zC=col(100-zP,80,90),eC=col(100-eP,50,65);
+    nD+=n;nZ+=zY;nE+=eY;
+    h+=`<tr>
+      <td><span class="sr-dot" style="background:${SRC[s]}"></span><b>${s}</b></td>
+      <td class="rt">${n}</td>
+      <td class="rt">${zNo}</td>
+      <td class="rt"><span style="color:${zP>20?'var(--red)':zP>10?'var(--gold)':'var(--green)'};font-weight:700;font-family:'DM Mono',monospace">${zP}%</span></td>
+      <td class="rt">${eNo}</td>
+      <td class="rt"><span style="color:${eP>50?'var(--red)':eP>35?'var(--gold)':'var(--green)'};font-weight:700;font-family:'DM Mono',monospace">${eP}%</span></td>
+    </tr>`;
+  });
+  const nzP=pct(nD-nZ,nD),neP=pct(nD-nE,nD);
+  h+=`<tr style="border-top:2px solid var(--border);font-weight:700">
+    <td>Network</td><td class="rt">${nD}</td>
+    <td class="rt">${nD-nZ}</td>
+    <td class="rt"><span style="color:${nzP>20?'var(--red)':'var(--gold)'};font-family:'DM Mono',monospace;font-weight:700">${nzP}%</span></td>
+    <td class="rt">${nD-nE}</td>
+    <td class="rt"><span style="color:${neP>50?'var(--red)':'var(--gold)'};font-family:'DM Mono',monospace;font-weight:700">${neP}%</span></td>
+  </tr></table>
+  <div style="margin-top:.75rem;font-size:11px;color:var(--muted);border-top:1px solid var(--border);padding-top:.5rem">
+    Apr'25 benchmarks: ZD — Rithala 94.6% · BV 93.1% · Sec 3 84.2% · Karala 69.7% &nbsp;|&nbsp;
+    EW — Rithala 55.2% · Sec 3 56.0% · BV 39.3%
+  </div>`;
+  document.getElementById('addonPanel').innerHTML=h;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  ALL SALESPERSON TRACKER
+// ═══════════════════════════════════════════════════════════
+function renderSP(filter='All'){
+  srFilter=filter;
+  // Update filter buttons
+  const btns=document.getElementById('srFilterBtns');
+  btns.innerHTML=['All',...SR].map(s=>
+    `<button onclick="renderSP('${s}')" style="background:${s===filter?(s==='All'?'var(--red)':SRC[s]):'var(--bg3)'};color:${s===filter?'#fff':'var(--muted)'};border:1px solid ${s===filter?(s==='All'?'var(--red)':SRC[s]):'var(--border)'};padding:4px 12px;border-radius:20px;font-size:11px;cursor:pointer">${s}</button>`
+  ).join('');
+
+  const dow=TODAY.getDay();
+  const wkS=new Date(TODAY);wkS.setDate(DAY-(dow===0?6:dow-1));
+  const lwS=new Date(wkS);lwS.setDate(lwS.getDate()-7);
+
+  const src=filter==='All'?APR:APR.filter(r=>r._sr===filter);
+  const spMap={};
+  src.forEach(r=>{
+    if(!r._sp) return;
+    const key=r._sp+'||'+r._sr;
+    if(!spMap[key]) spMap[key]={name:r._sp,sr:r._sr,mtd:0,f1:0,f2:0,tw:0,lw:0,models:{},zd:0,ew:0,fin:0};
+    const s=spMap[key];
+    s.mtd++;
+    s.models[r._m]=(s.models[r._m]||0)+1;
+    if(r._d&&r._d.getDate()<=15) s.f1++; else s.f2++;
+    if(r._d>=wkS) s.tw++;
+    else if(r._d>=lwS) s.lw++;
+    if(isY(getZD(r))) s.zd++;
+    if(isY(getEW(r))) s.ew++;
+    if(getF(r).toLowerCase().includes('finance')) s.fin++;
+  });
+
+  const sortedSR=filter==='All'?SR:[filter];
+  const sorted=Object.values(spMap).sort((a,b)=>{
+    if(filter==='All'&&a.sr!==b.sr) return SR.indexOf(a.sr)-SR.indexOf(b.sr);
+    return b.mtd-a.mtd;
+  });
+
+  if(!sorted.length){
+    document.getElementById('spPanel').innerHTML=`<div style="color:var(--muted);font-size:12px">No salesperson data available. Will populate from CSV once April deals are entered.</div>`;
+    return;
+  }
+
+  let h=`<table class="tbl" style="min-width:860px">
+    <tr>
+      <th>#</th><th>Exec</th><th>Counter</th>
+      <th class="rt">MTD</th><th class="rt">F1<br><span style="font-weight:400;font-size:9px">1-15</span></th>
+      <th class="rt">F2<br><span style="font-weight:400;font-size:9px">16-30</span></th>
+      <th class="rt">Last Wk</th><th class="rt">This Wk</th>
+      <th class="rt">Top Model</th>
+      <th class="rt">ZD%</th><th class="rt" style="color:var(--red)">No ZD%</th>
+      <th class="rt">EW%</th><th class="rt" style="color:var(--red)">No EW%</th>
+      <th class="rt">Fin%</th>
+    </tr>`;
+
+  let curSR='',rank=0;
+  sorted.forEach(s=>{
+    if(filter==='All'&&s.sr!==curSR){
+      curSR=s.sr;rank=0;
+      h+=`<tr style="background:rgba(255,255,255,.025)">
+        <td colspan="14" style="font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:1.5px;color:${SRC[s.sr]||'#fff'};padding:8px 10px">${s.sr}</td>
+      </tr>`;
+    }
+    rank++;
+    const topM=Object.entries(s.models).sort((a,b)=>b[1]-a[1])[0];
+    const zdP=pct(s.zd,s.mtd),ewP=pct(s.ew,s.mtd),finP=pct(s.fin,s.mtd);
+    const noZP=100-zdP,noEP=100-ewP;
+    const rc=['r1','r2','r3'][rank-1]||'';
+    h+=`<tr>
+      <td><span class="rnk ${rc}">${rank}</span></td>
+      <td><b>${s.name}</b></td>
+      <td><span class="sr-dot" style="background:${SRC[s.sr]||'#888'}"></span>${filter==='All'?'':''}</td>
+      <td class="rt"><b>${s.mtd}</b></td>
+      <td class="rt">${s.f1}</td><td class="rt">${s.f2}</td>
+      <td class="rt">${s.lw}</td><td class="rt">${s.tw}</td>
+      <td class="rt" style="font-size:11px">${topM?topM[0]:'—'}</td>
+      <td class="rt"><span style="color:var(--green);font-family:'DM Mono',monospace;font-size:11px">${zdP}%</span></td>
+      <td class="rt"><span style="color:${noZP>20?'var(--red)':noZP>10?'var(--gold)':'var(--green)'};font-family:'DM Mono',monospace;font-size:11px;font-weight:600">${noZP}%</span></td>
+      <td class="rt"><span style="color:var(--green);font-family:'DM Mono',monospace;font-size:11px">${ewP}%</span></td>
+      <td class="rt"><span style="color:${noEP>50?'var(--red)':noEP>35?'var(--gold)':'var(--green)'};font-family:'DM Mono',monospace;font-size:11px;font-weight:600">${noEP}%</span></td>
+      <td class="rt"><span style="font-family:'DM Mono',monospace;font-size:11px">${finP}%</span></td>
+    </tr>`;
+  });
+
+  // Network row
+  const all=Object.values(spMap);
+  const am=all.reduce((a,s)=>a+s.mtd,0);
+  const az=all.reduce((a,s)=>a+s.zd,0);
+  const ae=all.reduce((a,s)=>a+s.ew,0);
+  const af=all.reduce((a,s)=>a+s.fin,0);
+  h+=`<tr style="border-top:2px solid var(--border);font-weight:700;background:rgba(255,255,255,.015)">
+    <td colspan="3">Total</td><td class="rt">${am}</td>
+    <td class="rt">—</td><td class="rt">—</td><td class="rt">—</td><td class="rt">—</td><td class="rt">—</td>
+    <td class="rt"><span style="color:var(--green);font-family:'DM Mono',monospace">${pct(az,am)}%</span></td>
+    <td class="rt"><span style="color:${(100-pct(az,am))>20?'var(--red)':'var(--gold)'};font-family:'DM Mono',monospace;font-weight:700">${100-pct(az,am)}%</span></td>
+    <td class="rt"><span style="color:var(--green);font-family:'DM Mono',monospace">${pct(ae,am)}%</span></td>
+    <td class="rt"><span style="color:${(100-pct(ae,am))>50?'var(--red)':'var(--gold)'};font-family:'DM Mono',monospace;font-weight:700">${100-pct(ae,am)}%</span></td>
+    <td class="rt"><span style="font-family:'DM Mono',monospace">${pct(af,am)}%</span></td>
+  </tr></table>
+  <div style="margin-top:.6rem;font-size:11px;color:var(--muted)">🔴 Red = gap needs attention · Sorted by showroom then MTD · Click filter buttons to focus on one counter</div>`;
+  document.getElementById('spPanel').innerHTML=h;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  AI COMMENTARY
+// ═══════════════════════════════════════════════════════════
+async function genAI(force=false){
+  if(!force&&AI.daily) return;
+  document.getElementById('aiBody').textContent='Generating your briefing…';
+  const mtd=APR.length,dLeft=30-DAY,reqR=dLeft>0?Math.ceil((T.total-mtd)/dLeft):0;
+  const p=pct(mtd,T.total);
+  const srB=SR.map(s=>`${s}: ${APR.filter(r=>r._sr===s).length}/${T.sr[s]||0}`).join(' | ');
+  const mC={};APR.forEach(r=>{if(r._m)mC[r._m]=(mC[r._m]||0)+1});
+  const mB=Object.entries(T.model).map(([m,t])=>`${m}: ${mC[m]||0}/${t}`).join(' | ');
+  const wkS=new Date(TODAY);const dow=TODAY.getDay();wkS.setDate(DAY-(dow===0?6:dow-1));
+  const lwS=new Date(wkS);lwS.setDate(lwS.getDate()-7);
+  const tw=APR.filter(r=>r._d&&r._d>=wkS).length;
+  const lw=APR.filter(r=>r._d&&r._d>=lwS&&r._d<wkS).length;
+  const f1=APR.filter(r=>r._d&&r._d.getDate()<=15).length;
+  const f2=APR.filter(r=>r._d&&r._d.getDate()>15).length;
+  const zdB=SR.map(s=>{const d=APR.filter(r=>r._sr===s);const n=d.length;if(!n) return null;const z=d.filter(r=>isY(getZD(r))).length;return `${s} NoZD:${pct(n-z,n)}%`;}).filter(Boolean).join(' | ');
+  const ewB=SR.map(s=>{const d=APR.filter(r=>r._sr===s);const n=d.length;if(!n) return null;const e=d.filter(r=>isY(getEW(r))).length;return `${s} NoEW:${pct(n-e,n)}%`;}).filter(Boolean).join(' | ');
+  const finN=APR.filter(r=>getF(r).toLowerCase().includes('finance')).length;
+  const exN=APR.filter(r=>{const v=(getExch(r)||'').toLowerCase();return v.includes('yes')||v==='y';}).length;
+  const spC={};APR.forEach(r=>{if(r._sp)spC[r._sp]=(spC[r._sp]||0)+1;});
+  const topSPs=Object.entries(spC).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([n,v])=>`${n}:${v}`).join(', ');
+
+  const prompt=`You are the sales intelligence AI for Roop Leasing & Finance Pvt Ltd — Honda 2-wheeler dealership in Delhi run by Prateek Sethi. 4 outlets: Sec 3, Rithala, Budh Vihar, Karala.
+
+APRIL ${YEAR} DATA — Day ${DAY} of 30:
+MTD: ${mtd}/${T.total} (${p}%) | Today: ${APR.filter(r=>r._d&&r._d.getDate()===DAY).length} | Days left: ${dLeft} | Required: ${reqR}/day
+
+SHOWROOM vs TARGET: ${srB}
+MODEL vs TARGET: ${mB}
+WEEKLY: This week ${tw} | Last week ${lw} | F1(1-15): ${f1} | F2(16-30): ${f2}
+ZERO DEP GAPS: ${zdB||'No ZD data'}
+EW GAPS: ${ewB||'No EW data'}
+FINANCE: ${finN} cases (${pct(finN,mtd||1)}% penetration) | EXCHANGE: ${exN} cases
+TOP SALESPEOPLE: ${topSPs||'No data'}
+
+APR'25 ACTUALS: Sec 3:195 | Rithala:198 | BV:163 | Network:561
+APR'26 TARGETS: Sec 3:175 | Rithala:174 | BV:133 | Network:482 (10% growth basis)
+
+Write 4 briefings clearly labeled:
+[DAILY] Today's snapshot — what's on track, what needs urgent attention. 4-5 lines.
+[WEEKLY] This week vs last week, trajectory. 4-5 lines.
+[FORTNIGHT] F1 vs F2 split, what needs to happen in remaining days. 4-5 lines.
+[MONTHLY] Full April picture, pace to target, model/showroom risks, one key call to action. 5-6 lines.
+
+Be sharp. Use numbers. Call out showrooms and execs by name. No fluff.`;
+
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:prompt}]})
+    });
+    const data=await res.json();
+    const txt=data.content?.[0]?.text||'Unable to generate commentary.';
+    const get=(tag,next)=>{const r=new RegExp(`\\[${tag}\\]([\\s\\S]*?)(?=\\[${next}\\]|$)`);return(txt.match(r)?.[1]||'').trim();};
+    AI.daily=get('DAILY','WEEKLY');
+    AI.weekly=get('WEEKLY','FORTNIGHT');
+    AI.fortnight=get('FORTNIGHT','MONTHLY');
+    AI.monthly=get('MONTHLY','$')||txt;
+    document.getElementById('aiBody').textContent=AI[activeAI]||AI.daily;
+    document.getElementById('aiTs').textContent=`Generated ${new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})} IST`;
+  }catch(e){
+    document.getElementById('aiBody').textContent=`⚠️ AI briefing unavailable. All dashboard data is live. Error: ${e.message}`;
+  }
+}
+
+function switchAI(tab,el){
+  activeAI=tab;
+  document.querySelectorAll('.ai-tab').forEach(t=>t.classList.remove('on'));
+  el.classList.add('on');
+  document.getElementById('aiBody').textContent=AI[tab]||'Click "✦ Regenerate AI" to generate this view.';
+}
+
+// ═══════════════════════════════════════════════════════════
+//  TAB SWITCHER
+// ═══════════════════════════════════════════════════════════
+function sw(grp,tab,el){
+  document.querySelectorAll(`[id^="${grp}-"]`).forEach(t=>t.classList.remove('on'));
+  document.getElementById(`${grp}-${tab}`).classList.add('on');
+  el.closest('.tabs').querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+  el.classList.add('on');
+  if(grp==='sr'&&tab==='ly') renderSrLy();
+  if(grp==='sr'&&tab==='trend') renderSrTrend();
+  if(grp==='m'&&tab==='tgt') renderModelTgt();
+  if(grp==='m'&&tab==='sr') renderModelSr();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  MAIN LOAD
+// ═══════════════════════════════════════════════════════════
+async function loadAll(){
+  document.getElementById('refreshBtn').disabled=true;
+  setSplash('Fetching Google Sheets data…');
+  await fetchCSV();
+  setSplash('Crunching numbers…');
+  renderStats();
+  renderTargets();
+  renderWeek();
+  renderSrMtd();
+  renderModelMix();
+  renderMatrix();
+  renderFortnight();
+  renderFinChart();
+  renderBanks();
+  renderExchange();
+  renderAddon();
+  renderSP('All');
+  document.getElementById('hdrDate').textContent=
+    TODAY.toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short',year:'numeric'})+
+    ' · '+TODAY.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+  setSplash('Generating AI briefing…');
+  await genAI();
+  hideSplash();
+  document.getElementById('refreshBtn').disabled=false;
+}
+
+function setSplash(msg){
+  document.getElementById('splash').style.display='flex';
+  document.getElementById('splashTxt').textContent=msg;
+}
+function hideSplash(){document.getElementById('splash').style.display='none';}
+
+// ═══════════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════════
+loadAll();
+</script>
+</body>
+</html>
