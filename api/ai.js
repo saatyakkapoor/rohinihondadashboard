@@ -1,4 +1,4 @@
-module.exports = async (req, res) => {
+export default async function handler(req, res) {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
     return res
@@ -69,5 +69,4 @@ module.exports = async (req, res) => {
     console.error("AI route error", e);
     return res.status(500).json({ error: e.message || "Unknown error" });
   }
-};
-
+}
