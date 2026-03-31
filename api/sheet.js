@@ -1,14 +1,37 @@
 export default async function handler(req, res) {
-  // Direct CSV export URL (already downloads as CSV when opened in browser)
   const url =
     "https://docs.google.com/spreadsheets/d/15AB4hbKxEZePHFU9lhzDFt6tO9ZSgVt7Vh9HXgYT2oc/export?format=csv&gid=0";
 
-  // Just redirect the client to Google's export URL.
-  // This makes the browser behave exactly like when you open the URL directly,
-  // and avoids any server-side fetch / auth issues.
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.writeHead(302, {
-    Location: url,
-  });
-  res.end();
+  try {
+    const response = await fetch(url, {
+      redirect: "follow",
+    });
+
+    const text = await response.text();
+
+    const ct = response.headers.get("content-type") || "";
+    const looksLikeHtml =
+      ct.includes("text/html") ||
+      text.startsWith("<!DOCTYPE html>") ||
+      text.toLowerCase().includes("accounts.google.com");
+
+    // Only treat it as an error if it really looks like an HTML/login page.
+    if (looksLikeHtml) {
+      res.setHeader("Access-Control-Allow-Origin", "*");
+      return res.status(500).json({
+        error:
+          "Google Sheet is not returning CSV (HTML/login detected). Please ensure the Sheet is published or shared publicly.",
+      });
+    }
+
+    // Otherwise forward the CSV (even if status code is non-200 but body is CSV)
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Content-Type", "text/plain; charset=utf-8");
+    return res.status(200).send(text);
+  } catch (e) {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    return res
+      .status(500)
+      .json({ error: "Error fetching Sheet: " + (e.message || String(e)) });
+  }
 }
