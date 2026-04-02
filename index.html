@@ -406,8 +406,39 @@ const CHARTS={};
 // ═══════════════════════════════════════════════════════════
 const pDate=s=>{
   if(!s) return null;
-  const m=s.match(/(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})/);
-  return m?new Date(+m[3],+m[2]-1,+m[1]):null;
+  if(s instanceof Date) return isNaN(s.getTime()) ? null : s;
+  const str=String(s).trim();
+  if(!str) return null;
+
+  const make=(y,mo,d)=>{
+    const dt=new Date(y,mo,d);
+    // Guard against invalid dates like 31/02/2026
+    if(dt.getFullYear()!==y || dt.getMonth()!==mo || dt.getDate()!==d) return null;
+    return dt;
+  };
+
+  // dd/mm/yyyy (e.g. 31/03/2026) and allow optional spaces around separators
+  let m=str.match(/(\d{1,2})\s*[\/\-\.]\s*(\d{1,2})\s*[\/\-\.]\s*(\d{4})/);
+  if(m){
+    return make(+m[3], +m[2]-1, +m[1]);
+  }
+
+  // dd/mm/yy
+  m=str.match(/(\d{1,2})\s*[\/\-\.]\s*(\d{1,2})\s*[\/\-\.]\s*(\d{2})/);
+  if(m){
+    const nowY=new Date().getFullYear();
+    const base=Math.floor(nowY/100)*100;
+    const year=base + (+m[3]);
+    return make(year, +m[2]-1, +m[1]);
+  }
+
+  // yyyy/mm/dd as fallback
+  m=str.match(/(\d{4})\s*[\/\-\.]\s*(\d{1,2})\s*[\/\-\.]\s*(\d{1,2})/);
+  if(m){
+    return make(+m[1], +m[2]-1, +m[3]);
+  }
+
+  return null;
 };
 const isY=v=>{if(!v) return false; const s=String(v).toLowerCase().trim(); return s==='yes'||s==='y'||s.includes('yes')||+v>0;};
 // Real sheet header uses "Cash or Finance" and "Financier Name"
