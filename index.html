@@ -370,29 +370,8 @@ const SR=['Sec 3','Rithala','Budh Vihar','Karala'];
 const SRC={'Sec 3':'#378ADD','Rithala':'#00B67A','Budh Vihar':'#F5A623','Karala':'#D4537E'};
 const MC=['#378ADD','#00B67A','#F5A623','#D4537E','#7F77DD','#E8000D','#00C9B1','#FF6B35'];
 
-const T={
-  sr:{'Sec 3':175,'Rithala':174,'Budh Vihar':133,'Karala':0},
-  total:482,
-  model:{'Activa 6G':230,'Activa 125 BS6':106,'SP 125':102,'Shine 125':34,'CB125Hornet':5,'Dio 125':3},
-  msr:{
-    'Activa 6G':{'Sec 3':99,'Rithala':86,'Budh Vihar':44},
-    'Activa 125 BS6':{'Sec 3':40,'Rithala':32,'Budh Vihar':34},
-    'SP 125':{'Sec 3':26,'Rithala':39,'Budh Vihar':37},
-    'Shine 125':{'Sec 3':7,'Rithala':10,'Budh Vihar':17},
-    'CB125Hornet':{'Sec 3':2,'Rithala':2,'Budh Vihar':1},
-    'Dio 125':{'Sec 3':0,'Rithala':3,'Budh Vihar':0}
-  }
-};
-
-const HIST={
-  apr24:{'Sec 3':175,'Rithala':182,'Budh Vihar':151,'Karala':0},
-  apr25:{'Sec 3':195,'Rithala':198,'Budh Vihar':163,'Karala':5},
-  monthly25:{
-    'Sec 3':[173,155,192,195,188,178,200,195,188,176,180,165],
-    'Rithala':[168,148,175,198,190,175,195,188,178,170,175,158],
-    'Budh Vihar':[142,128,155,163,158,148,160,155,148,140,145,132]
-  }
-};
+// All numbers must come from the live sheet.
+// No hardcoded targets/history and no demo/benchmark fallback.
 
 // ═══════════════════════════════════════════════════════════
 //  STATE
@@ -417,19 +396,32 @@ const pDate=s=>{
     return dt;
   };
 
-  // dd/mm/yyyy (e.g. 31/03/2026) and allow optional spaces around separators
+  const parseDMY=(d,mo,y)=>make(y,mo-1,d);
+  const parseMDY=(mo,d,y)=>make(y,mo-1,d);
+
+  // Common exports are either dd/mm/yyyy or mm/dd/yyyy.
+  // Disambiguate using a simple heuristic:
+  // - If first part > 12, it must be day => dd/mm
+  // - Else if second part > 12, it must be day => mm/dd
+  // - Else default to dd/mm (your stated format)
   let m=str.match(/(\d{1,2})\s*[\/\-\.]\s*(\d{1,2})\s*[\/\-\.]\s*(\d{4})/);
   if(m){
-    return make(+m[3], +m[2]-1, +m[1]);
+    const a=+m[1], b=+m[2], y=+m[3];
+    if(a>12) return parseDMY(a,b,y);
+    if(b>12) return parseMDY(a,b,y);
+    return parseDMY(a,b,y);
   }
 
-  // dd/mm/yy
+  // dd/mm/yy or mm/dd/yy (same heuristic)
   m=str.match(/(\d{1,2})\s*[\/\-\.]\s*(\d{1,2})\s*[\/\-\.]\s*(\d{2})/);
   if(m){
+    const a=+m[1], b=+m[2], yy=+m[3];
     const nowY=new Date().getFullYear();
     const base=Math.floor(nowY/100)*100;
-    const year=base + (+m[3]);
-    return make(year, +m[2]-1, +m[1]);
+    const y=base + yy;
+    if(a>12) return parseDMY(a,b,y);
+    if(b>12) return parseMDY(a,b,y);
+    return parseDMY(a,b,y);
   }
 
   // yyyy/mm/dd as fallback
@@ -490,57 +482,13 @@ async function fetchCSV(){
     return true;
   }catch(e){
     console.warn('Sheet fetch failed:',e);
-    notice('Live Google Sheets fetch failed via /api/sheet. Showing April benchmark simulation instead.');
-    setStatus('error','Using Apr 25 benchmarks — tap Refresh to retry');
-    APR=generateBenchmarkData();
+    RAW=[];
+    APR=[];
+    notice('Live Google Sheets fetch failed. Check sheet sharing/publish settings, then hit Refresh.');
+    setStatus('error','Live fetch failed — fix Sheet access and retry');
+    document.getElementById('rowCount').textContent='Live data unavailable';
     return false;
   }
-}
-
-// Generate synthetic benchmark rows so dashboard renders meaningfully even without live data
-function generateBenchmarkData(){
-  const rows=[];
-  const models=['Activa 6G','Activa 125 BS6','SP 125','Shine 125','CB125Hornet','Dio 125'];
-  const modelW=[40,18,18,6,1,1]; // weights
-  const srDist={'Sec 3':175,'Rithala':174,'Budh Vihar':133,'Karala':0};
-  const spNames={'Sec 3':['Nikita','Priya','Sunita','Rekha','Meena'],
-    'Rithala':['Kusum','Anita','Sonia','Pooja','Kavita'],
-    'Budh Vihar':['Vinay','Rahul','Amit','Suresh','Deepak'],
-    'Karala':['Ravi']};
-  const today=new Date();
-  const yr=today.getFullYear();
-
-  Object.entries(srDist).forEach(([sr,count])=>{
-    if(!count) return;
-    // Distribute across April proportionally to days elapsed
-    const days=today.getDate();
-    const mtdCount=Math.round(count*(days/30));
-    const sps=spNames[sr]||['Exec1'];
-    for(let i=0;i<mtdCount;i++){
-      const dayN=Math.floor(Math.random()*days)+1;
-      const d=new Date(yr,3,dayN);
-      // Pick model by weight
-      let rnd=Math.random()*84,mIdx=0,acc=0;
-      for(let j=0;j<modelW.length;j++){acc+=modelW[j];if(rnd<acc){mIdx=j;break;}}
-      const isFinance=Math.random()>0.4;
-      const hasZD=Math.random()>0.1;
-      const hasEW=Math.random()>0.45;
-      rows.push({
-        _d:d,_sr:sr,_m:models[mIdx],
-        _sp:sps[i%sps.length],
-        'Delivery Date':`${dayN}/${4}/${yr}`,
-        'Mention Your Counter':sr,
-        'Model':models[mIdx],
-        'Finance/Cash':isFinance?'Finance':'Cash',
-        'Bank Name':isFinance?(['HDFC','Bajaj','Hero Fincorp','Shriram','Tata Capital'][Math.floor(Math.random()*5)]):'',
-        'Zero Dep':hasZD?'Yes':'No',
-        'EW':hasEW?'Yes':'No',
-        'Exchange':Math.random()>0.88?'Yes':'No',
-      });
-    }
-  });
-  document.getElementById('rowCount').textContent=`${rows.length} benchmark rows (Apr'26 pace estimate) — live data unavailable`;
-  return rows;
 }
 
 function parseCSV(txt){
@@ -562,10 +510,18 @@ function parseCSV(txt){
 
 function parseAndProcess(csv){
   const rows=parseCSV(csv);
+  const getDateVal=r=>
+    r['Delivery Date']||
+    r['Delivery date']||
+    r['DeliveryDate']||
+    r['Date']||
+    r['Delivery']||
+    r['Delivery Dt']||
+    '';
   RAW=rows.filter(r=>{
     const c=(r['Mention Your Counter']||'').trim();
     return c&&c!=='Tax Invoice';
-  }).map(r=>({...r,_d:pDate(r['Delivery Date']),_sr:(r['Mention Your Counter']||'').trim(),_m:(r['Model']||'').trim(),_sp:getSP(r).trim()}));
+  }).map(r=>({...r,_d:pDate(getDateVal(r)),_sr:(r['Mention Your Counter']||'').trim(),_m:(r['Model']||'').trim(),_sp:getSP(r).trim()}));
 
   APR=RAW.filter(r=>r._d&&r._d.getMonth()===3&&r._d.getFullYear()===YEAR);
   const total=RAW.length;
@@ -579,14 +535,9 @@ function parseAndProcess(csv){
 // ═══════════════════════════════════════════════════════════
 function renderStats(){
   const mtd=APR.length;
-  const lyTotal=Object.values(HIST.apr25).reduce((a,b)=>a+b,0);
-  const lyPace=Math.round(lyTotal*(DAY/30));
-  const vLY=mtd-lyPace;
   const todayN=APR.filter(r=>r._d&&r._d.getDate()===DAY).length;
   const avg=DAY?Math.round(mtd/DAY):0;
   const dLeft=30-DAY;
-  const reqR=dLeft>0?Math.ceil((T.total-mtd)/dLeft):0;
-  const p=pct(mtd,T.total);
 
   const dow=TODAY.getDay();
   const wkS=new Date(TODAY);wkS.setDate(DAY-(dow===0?6:dow-1));
@@ -604,10 +555,10 @@ function renderStats(){
 
   const set=(id,v)=>document.getElementById(id).textContent=v;
   set('s_mtd',mtd||'0');
-  const mb=document.getElementById('s_mtd_b');mb.textContent=`vs LY pace: ${vLY>=0?'+':''}${vLY}`;mb.className='badge '+(vLY>=0?'up':'dn');
+  const mb=document.getElementById('s_mtd_b');mb.textContent=`Live`;mb.className='badge nt';
   set('s_today',todayN);document.getElementById('s_today_b').textContent=`avg: ${avg}/day`;
-  set('s_days',`${DAY} / ${dLeft}`);document.getElementById('s_rate').textContent=T.total?`Required: ${reqR}/day to hit 482`:'Set target';
-  set('s_pct',p?p+'%':'—');const pb=document.getElementById('s_pct_b');pb.textContent=`${mtd} of ${T.total} units`;pb.className='badge '+(p>=80?'up':p>=60?'nt':'dn');
+  set('s_days',`${DAY} / ${dLeft}`);document.getElementById('s_rate').textContent='Target not available from sheet';
+  set('s_pct','—');const pb=document.getElementById('s_pct_b');pb.textContent='Target not available from sheet';pb.className='badge nt';
   set('s_wk',tw);const wb=document.getElementById('s_wk_b');wb.textContent=`vs last wk: ${wkV>=0?'+':''}${wkV}`;wb.className='badge '+(wkV>=0?'up':'dn');
   set('s_top_sr',topSR[0]);document.getElementById('s_top_sr_b').textContent=`${topSR[1]} units MTD`;
   set('s_top_sp',topSP[0].split(' ')[0]);document.getElementById('s_top_sp_b').textContent=`${topSP[0]} · ${topSP[1]} units`;
@@ -618,22 +569,8 @@ function renderStats(){
 //  TARGET TRACKER
 // ═══════════════════════════════════════════════════════════
 function renderTargets(){
-  const rows=[...SR,'Network'];
-  let h='';
-  rows.forEach(s=>{
-    const tgt=s==='Network'?T.total:T.sr[s];
-    if(!tgt) return;
-    const act=s==='Network'?APR.length:APR.filter(r=>r._sr===s).length;
-    const p=Math.min(100,pct(act,tgt));
-    const c=col(p,60,80);
-    h+=`<div class="tgt-row">
-      <div class="tgt-name">${s==='Budh Vihar'?'Budh Vhr':s}</div>
-      <div class="tgt-track"><div class="tgt-fill" style="width:${p}%;background:${c}"></div></div>
-      <div class="tgt-nums">${act} / ${tgt}</div>
-      <div class="tgt-pct" style="color:${c}">${p}%</div>
-    </div>`;
-  });
-  document.getElementById('tgtPanel').innerHTML=h;
+  document.getElementById('tgtPanel').innerHTML=
+    `<div class="muted">Targets are not available from the live sheet. Add target columns/sheet or keep this section disabled.</div>`;
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -666,14 +603,18 @@ function renderWeek(){
 // ═══════════════════════════════════════════════════════════
 function renderSrMtd(){
   kC('srMtd');
-  const labels=SR.filter(s=>APR.some(r=>r._sr===s)||T.sr[s]);
+  const labels=SR.filter(s=>APR.some(r=>r._sr===s));
   const data=labels.map(s=>APR.filter(r=>r._sr===s).length);
-  const tgts=labels.map(s=>T.sr[s]||0);
+  if(!labels.length){
+    kC('srMtd');
+    const el=document.getElementById('srMtdCh');
+    if(el) el.parentElement.innerHTML=`<div class="muted">No April rows found in the live sheet.</div>`;
+    return;
+  }
   CHARTS['srMtd']=new Chart(document.getElementById('srMtdCh'),{
     type:'bar',
     data:{labels,datasets:[
-      {label:'MTD Actual',data,backgroundColor:labels.map(s=>SRC[s]),borderRadius:4},
-      {label:'Target',data:tgts,backgroundColor:'rgba(255,255,255,.06)',borderRadius:4}
+      {label:'MTD',data,backgroundColor:labels.map(s=>SRC[s]),borderRadius:4}
     ]},
     options:{responsive:true,maintainAspectRatio:false,
       plugins:{legend:{labels:{color:'#8A8F9E',font:{size:10}}}},
@@ -681,31 +622,15 @@ function renderSrMtd(){
   });
 }
 function renderSrLy(){
-  let h=`<tr><th>Showroom</th><th class="rt">Apr'24</th><th class="rt">Apr'25</th><th class="rt">Apr'26 MTD</th><th class="rt">vs LY pace</th></tr>`;
-  SR.forEach(s=>{
-    const v24=HIST.apr24[s]||0,v25=HIST.apr25[s]||0;
-    const v26=APR.filter(r=>r._sr===s).length;
-    const lyP=Math.round(v25*(DAY/30));
-    const vs=v26-lyP;
-    h+=`<tr><td><span class="sr-dot" style="background:${SRC[s]}"></span>${s}</td>
-      <td class="rt">${v24}</td><td class="rt">${v25}</td><td class="rt"><b>${v26}</b></td>
-      <td class="rt"><span class="badge ${vs>=0?'up':'dn'}">${vs>=0?'+':''}${vs}</span></td></tr>`;
-  });
-  document.getElementById('srLyTbl').innerHTML=h;
+  document.getElementById('srLyTbl').innerHTML=
+    `<tr><th>Showroom</th><th class="rt">Apr MTD</th></tr>`+
+    SR.map(s=>`<tr><td><span class="sr-dot" style="background:${SRC[s]}"></span>${s}</td><td class="rt"><b>${APR.filter(r=>r._sr===s).length}</b></td></tr>`).join('')+
+    `<tr><td colspan="2" style="color:var(--muted);font-size:11px;padding-top:10px">LY comparisons are disabled (no hardcoded history).</td></tr>`;
 }
 function renderSrTrend(){
   kC('srTrend');
-  const months=['Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar'];
-  CHARTS['srTrend']=new Chart(document.getElementById('srTrendCh'),{
-    type:'line',
-    data:{labels:months,datasets:SR.slice(0,3).map(s=>({
-      label:s,data:HIST.monthly25[s],borderColor:SRC[s],
-      backgroundColor:SRC[s]+'20',tension:.4,fill:false,pointRadius:3
-    }))},
-    options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{labels:{color:'#8A8F9E',font:{size:10}}}},
-      scales:{x:{ticks:{color:'#8A8F9E'}},y:{ticks:{color:'#8A8F9E'},grid:{color:'rgba(255,255,255,.04)'}}}}
-  });
+  const el=document.getElementById('srTrendCh');
+  if(el) el.parentElement.innerHTML=`<div class="muted">Monthly trend requires historical data from the sheet (no hardcoded history).</div>`;
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -714,8 +639,12 @@ function renderSrTrend(){
 function renderModelMix(){
   kC('mMix');
   const mC={};APR.forEach(r=>{if(r._m)mC[r._m]=(mC[r._m]||0)+1});
-  const sorted=Object.keys(mC).length?Object.entries(mC).sort((a,b)=>b[1]-a[1]).slice(0,8):
-    Object.entries({'Activa 6G':89,'Activa 125 BS6':52,'SP 125':62,'Shine 125':14,'Shine 100':8}).slice(0,6);
+  const sorted=Object.entries(mC).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  if(!sorted.length){
+    const el=document.getElementById('mMixCh');
+    if(el) el.parentElement.innerHTML=`<div class="muted">No model data found in April rows.</div>`;
+    return;
+  }
   CHARTS['mMix']=new Chart(document.getElementById('mMixCh'),{
     type:'doughnut',
     data:{labels:sorted.map(e=>e[0]),datasets:[{data:sorted.map(e=>e[1]),backgroundColor:MC,borderWidth:0,hoverOffset:6}]},
@@ -724,18 +653,23 @@ function renderModelMix(){
   });
 }
 function renderModelTgt(){
-  let h=`<tr><th>Model</th><th class="rt">Target</th><th class="rt">MTD</th><th class="rt">%</th></tr>`;
-  const mC={};APR.forEach(r=>{if(r._m)mC[r._m]=(mC[r._m]||0)+1});
-  Object.entries(T.model).forEach(([m,tgt])=>{
-    const mtd=mC[m]||0;const p=pct(mtd,tgt);const c=col(p,60,80);
-    h+=`<tr><td><b>${m}</b></td><td class="rt">${tgt}</td><td class="rt">${mtd}</td>
-      <td class="rt"><span style="color:${c};font-weight:600;font-family:'DM Mono',monospace">${p}%</span></td></tr>`;
-  });
-  document.getElementById('mTgtTbl').innerHTML=h;
+  document.getElementById('mTgtTbl').innerHTML=
+    `<tr><th>Model</th><th class="rt">MTD</th></tr>`+
+    Object.entries(APR.reduce((acc,r)=>{if(r._m) acc[r._m]=(acc[r._m]||0)+1; return acc;},{}))
+      .sort((a,b)=>b[1]-a[1])
+      .map(([m,v])=>`<tr><td><b>${m}</b></td><td class="rt">${v}</td></tr>`).join('')+
+    `<tr><td colspan="2" style="color:var(--muted);font-size:11px;padding-top:10px">Targets are disabled (no hardcoded targets).</td></tr>`;
 }
 function renderModelSr(){
   kC('mSr');
-  const models=Object.keys(T.model).slice(0,5);
+  const mSet=new Set();
+  APR.forEach(r=>{ if(r._m) mSet.add(r._m); });
+  const models=[...mSet].slice(0,5);
+  if(!models.length){
+    const el=document.getElementById('mSrCh');
+    if(el) el.parentElement.innerHTML=`<div class="muted">No model data found in April rows.</div>`;
+    return;
+  }
   const mC={};
   APR.forEach(r=>{
     if(!r._m||!r._sr) return;
@@ -758,46 +692,8 @@ function renderModelSr(){
 //  MODEL × SHOWROOM MATRIX
 // ═══════════════════════════════════════════════════════════
 function renderMatrix(){
-  const mC={};
-  APR.forEach(r=>{
-    if(!r._m||!r._sr) return;
-    if(!mC[r._m]) mC[r._m]={};
-    mC[r._m][r._sr]=(mC[r._m][r._sr]||0)+1;
-    mC[r._m]._t=(mC[r._m]._t||0)+1;
-  });
-  const showrooms=['Sec 3','Rithala','Budh Vihar'];
-  let h=`<table class="tbl" style="min-width:600px">
-    <tr><th>Model</th>`;
-  showrooms.forEach(s=>h+=`<th class="rt">${s==='Budh Vihar'?'BV':s} Tgt</th><th class="rt">${s==='Budh Vihar'?'BV':s} MTD</th><th class="rt">%</th>`);
-  h+=`<th class="rt">Net Tgt</th><th class="rt">Net MTD</th><th class="rt">Net%</th></tr>`;
-
-  Object.entries(T.model).forEach(([m,netTgt])=>{
-    const netMtd=mC[m]?._t||0;const np=pct(netMtd,netTgt);const nc=col(np,60,80);
-    h+=`<tr><td><b>${m}</b></td>`;
-    showrooms.forEach(s=>{
-      const tgt=T.msr[m]?.[s]||0;
-      const mtd=mC[m]?.[s]||0;
-      const p=tgt?pct(mtd,tgt):0;const c=col(p,60,80);
-      h+=`<td class="rt" style="color:var(--muted)">${tgt||'—'}</td>
-          <td class="rt">${mtd}</td>
-          <td class="rt"><span style="color:${tgt?c:'var(--muted)'};font-family:'DM Mono',monospace;font-weight:600">${tgt?p+'%':'—'}</span></td>`;
-    });
-    h+=`<td class="rt">${netTgt}</td><td class="rt"><b>${netMtd}</b></td>
-        <td class="rt"><span class="badge ${bCls(np,60,80)}">${np}%</span></td></tr>`;
-  });
-
-  // Network totals
-  const netMtd=APR.length;const np=pct(netMtd,T.total);const nc=col(np,60,80);
-  h+=`<tr style="border-top:2px solid var(--border);font-weight:700"><td>Network</td>`;
-  showrooms.forEach(s=>{
-    const tgt=T.sr[s];const mtd=APR.filter(r=>r._sr===s).length;const p=pct(mtd,tgt);const c=col(p,60,80);
-    h+=`<td class="rt" style="color:var(--muted)">${tgt}</td><td class="rt">${mtd}</td>
-        <td class="rt"><span style="color:${c};font-family:'DM Mono',monospace;font-weight:700">${p}%</span></td>`;
-  });
-  h+=`<td class="rt">${T.total}</td><td class="rt"><b>${netMtd}</b></td>
-      <td class="rt"><span class="badge ${bCls(np,60,80)}">${np}%</span></td></tr>`;
-  h+=`</table>`;
-  document.getElementById('mxTbl').innerHTML=h;
+  document.getElementById('mxTbl').innerHTML=
+    `<div class="muted">Target matrix is disabled (no hardcoded targets). If you want this, add target fields/sheet in Google Sheets.</div>`;
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -806,18 +702,16 @@ function renderMatrix(){
 function renderFortnight(){
   const f1=APR.filter(r=>r._d&&r._d.getDate()<=15);
   const f2=APR.filter(r=>r._d&&r._d.getDate()>15);
-  const f1T=Math.round(T.total*.47),f2T=T.total-f1T;
   let h=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem">`;
-  [[f1,'F1: Apr 1–15',f1T],[f2,'F2: Apr 16–30',f2T]].forEach(([data,lbl,tgt])=>{
-    const n=data.length;const p=tgt?pct(n,tgt):0;const c=col(p,50,80);
+  [[f1,'F1: Apr 1–15'],[f2,'F2: Apr 16–30']].forEach(([data,lbl])=>{
+    const n=data.length;
     h+=`<div>
       <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:.5rem">${lbl}</div>
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:44px;color:${c};line-height:1">${n}</div>
-      <div style="font-size:11px;color:var(--muted);margin-top:3px">${tgt?`Target ~${tgt} · ${p}%`:''}</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:44px;color:var(--text);line-height:1">${n}</div>
       <div style="margin-top:.75rem">`;
     SR.forEach(s=>{
       const sv=data.filter(r=>r._sr===s).length;
-      if(sv||T.sr[s]) h+=`<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px">
+      if(sv) h+=`<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px">
         <span><span style="background:${SRC[s]};width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:5px"></span>${s}</span>
         <span style="font-family:'DM Mono',monospace">${sv}</span></div>`;
     });
@@ -835,13 +729,12 @@ function renderFinChart(){
   const fin=APR.filter(r=>getF(r).toLowerCase().includes('finance')).length;
   const cash=APR.filter(r=>getF(r).toLowerCase().includes('cash')).length;
   const other=APR.length-fin-cash;
-  const total=APR.length||T.total;
-  const hasD=fin>0||cash>0;
+  const hasD=APR.length>0;
   CHARTS['fin']=new Chart(document.getElementById('finCh'),{
     type:'bar',
     data:{labels:['Finance','Cash','Other'],
       datasets:[{label:'Cases',
-        data:hasD?[fin,cash,other]:[Math.round(total*.55),Math.round(total*.38),Math.round(total*.07)],
+        data:hasD?[fin,cash,other]:[0,0,0],
         backgroundColor:['#378ADD','#00B67A','#F5A623'],borderRadius:5}]},
     options:{responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:false}},
@@ -1083,11 +976,10 @@ function renderSP(filter='All'){
 async function genAI(force=false){
   if(!force&&AI.daily) return;
   document.getElementById('aiBody').textContent='Generating your briefing…';
-  const mtd=APR.length,dLeft=30-DAY,reqR=dLeft>0?Math.ceil((T.total-mtd)/dLeft):0;
-  const p=pct(mtd,T.total);
-  const srB=SR.map(s=>`${s}: ${APR.filter(r=>r._sr===s).length}/${T.sr[s]||0}`).join(' | ');
+  const mtd=APR.length,dLeft=30-DAY;
+  const srB=SR.map(s=>`${s}: ${APR.filter(r=>r._sr===s).length}`).join(' | ');
   const mC={};APR.forEach(r=>{if(r._m)mC[r._m]=(mC[r._m]||0)+1});
-  const mB=Object.entries(T.model).map(([m,t])=>`${m}: ${mC[m]||0}/${t}`).join(' | ');
+  const mB=Object.entries(mC).sort((a,b)=>b[1]-a[1]).slice(0,8).map(([m,v])=>`${m}: ${v}`).join(' | ');
   const wkS=new Date(TODAY);const dow=TODAY.getDay();wkS.setDate(DAY-(dow===0?6:dow-1));
   const lwS=new Date(wkS);lwS.setDate(lwS.getDate()-7);
   const tw=APR.filter(r=>r._d&&r._d>=wkS).length;
@@ -1104,18 +996,15 @@ async function genAI(force=false){
   const prompt=`You are the sales intelligence AI for Roop Leasing & Finance Pvt Ltd — Honda 2-wheeler dealership in Delhi run by Prateek Sethi. 4 outlets: Sec 3, Rithala, Budh Vihar, Karala.
 
 APRIL ${YEAR} DATA — Day ${DAY} of 30:
-MTD: ${mtd}/${T.total} (${p}%) | Today: ${APR.filter(r=>r._d&&r._d.getDate()===DAY).length} | Days left: ${dLeft} | Required: ${reqR}/day
+MTD: ${mtd} | Today: ${APR.filter(r=>r._d&&r._d.getDate()===DAY).length} | Days left: ${dLeft}
 
-SHOWROOM vs TARGET: ${srB}
-MODEL vs TARGET: ${mB}
+SHOWROOM: ${srB}
+MODEL: ${mB||'No model data'}
 WEEKLY: This week ${tw} | Last week ${lw} | F1(1-15): ${f1} | F2(16-30): ${f2}
 ZERO DEP GAPS: ${zdB||'No ZD data'}
 EW GAPS: ${ewB||'No EW data'}
 FINANCE: ${finN} cases (${pct(finN,mtd||1)}% penetration) | EXCHANGE: ${exN} cases
 TOP SALESPEOPLE: ${topSPs||'No data'}
-
-APR'25 ACTUALS: Sec 3:195 | Rithala:198 | BV:163 | Network:561
-APR'26 TARGETS: Sec 3:175 | Rithala:174 | BV:133 | Network:482 (10% growth basis)
 
 Use these 8 angles when you comment: 
 1) Finance penetration and financier mix by showroom and model. 
@@ -1124,7 +1013,7 @@ Use these 8 angles when you comment:
 4) Discount discipline vs policy, especially on Activa 6G / Shine. 
 5) Exchange penetration, exchanger productivity and age/value of exchanged vehicles. 
 6) Salesperson league table with MTD, F1/F2, ZD/EW/finance/exchange %. 
-7) Model and variant mix vs the target plan. 
+7) Model and variant mix. 
 8) Operational hygiene — pending shorts, promised dates, risky manager comments.
 
 Write 4 briefings clearly labeled:
