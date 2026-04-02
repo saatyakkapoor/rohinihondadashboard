@@ -268,7 +268,7 @@ a{color:inherit;text-decoration:none}
 
     <!-- WEEK DRILL -->
     <div class="panel">
-      <div class="p-hd"><div class="p-title">This Week — Daily</div><div class="p-sub">April 2026</div></div>
+      <div class="p-hd"><div class="p-title">This Week — Daily</div><div class="p-sub">April (Live Sheet)</div></div>
       <div class="p-body"><div class="wk" id="wkGrid"></div></div>
     </div>
 
@@ -310,7 +310,7 @@ a{color:inherit;text-decoration:none}
 
   <!-- MODEL TARGET TABLE FULL WIDTH -->
   <div class="panel">
-    <div class="p-hd"><div class="p-title">Model × Showroom Target Matrix</div><div class="p-sub">April 2026 — every cell shows MTD / Target (%)</div></div>
+    <div class="p-hd"><div class="p-title">Model × Showroom Target Matrix</div><div class="p-sub">April (Live Sheet)</div></div>
     <div class="p-body" id="mxTbl" style="overflow-x:auto">Loading…</div>
   </div>
 
@@ -363,9 +363,10 @@ a{color:inherit;text-decoration:none}
 //  CONSTANTS
 // ═══════════════════════════════════════════════════════════
 const TODAY=new Date();
-const DAY=TODAY.getDate();
+const DAY=Math.min(TODAY.getDate(),30);
 const MONTH=TODAY.getMonth(); // 3=April
 const YEAR=TODAY.getFullYear();
+let APR_YEAR=YEAR;
 const SR=['Sec 3','Rithala','Budh Vihar','Karala'];
 const SRC={'Sec 3':'#378ADD','Rithala':'#00B67A','Budh Vihar':'#F5A623','Karala':'#D4537E'};
 const MC=['#378ADD','#00B67A','#F5A623','#D4537E','#7F77DD','#E8000D','#00C9B1','#FF6B35'];
@@ -523,9 +524,16 @@ function parseAndProcess(csv){
     return c&&c!=='Tax Invoice';
   }).map(r=>({...r,_d:pDate(getDateVal(r)),_sr:(r['Mention Your Counter']||'').trim(),_m:(r['Model']||'').trim(),_sp:getSP(r).trim()}));
 
-  APR=RAW.filter(r=>r._d&&r._d.getMonth()===3&&r._d.getFullYear()===YEAR);
+  const aprilRows=RAW.filter(r=>r._d&&r._d.getMonth()===3);
+  const years=[...new Set(aprilRows.map(r=>r._d.getFullYear()))].sort((a,b)=>a-b);
+  if(years.length){
+    APR_YEAR=years.includes(YEAR)?YEAR:years[years.length-1];
+  }else{
+    APR_YEAR=YEAR;
+  }
+  APR=aprilRows.filter(r=>r._d.getFullYear()===APR_YEAR);
   const total=RAW.length;
-  document.getElementById('rowCount').textContent=`${total.toLocaleString()} total rows · ${APR.length} in April ${YEAR}`;
+  document.getElementById('rowCount').textContent=`${total.toLocaleString()} total rows · ${APR.length} in April ${APR_YEAR}`;
   setStatus('live',`<b>Live</b> — Last fetched ${new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}`,`${APR.length} April rows`);
   notice('');
 }
@@ -584,9 +592,9 @@ function renderWeek(){
   let h='';
   for(let i=0;i<7;i++){
     const d=new Date(mon);d.setDate(mon.getDate()+i);
-    const isT=d.getDate()===DAY&&d.getMonth()===3&&d.getFullYear()===YEAR;
+    const isT=d.getDate()===DAY&&d.getMonth()===3&&d.getFullYear()===APR_YEAR;
     const fut=d>TODAY;
-    const inA=d.getMonth()===3&&d.getFullYear()===YEAR;
+    const inA=d.getMonth()===3&&d.getFullYear()===APR_YEAR;
     const n=inA?APR.filter(r=>r._d&&r._d.getDate()===d.getDate()).length:null;
     const cls=fut?'future':n>avg?'good':n!==null&&n<avg?'bad':'';
     h+=`<div class="day ${isT?'today':''} ${cls}">
@@ -995,7 +1003,7 @@ async function genAI(force=false){
 
   const prompt=`You are the sales intelligence AI for Roop Leasing & Finance Pvt Ltd — Honda 2-wheeler dealership in Delhi run by Prateek Sethi. 4 outlets: Sec 3, Rithala, Budh Vihar, Karala.
 
-APRIL ${YEAR} DATA — Day ${DAY} of 30:
+APRIL ${APR_YEAR} DATA — Day ${DAY} of 30:
 MTD: ${mtd} | Today: ${APR.filter(r=>r._d&&r._d.getDate()===DAY).length} | Days left: ${dLeft}
 
 SHOWROOM: ${srB}
