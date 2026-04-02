@@ -505,24 +505,61 @@ function parseCSV(txt){
     cols.push(cur.trim());
     const row={};
     hdrs.forEach((h,i)=>row[h]=(cols[i]||'').replace(/^"|"$/g,'').trim());
+    // Keep raw columns for resilient fallback mapping when headers are malformed.
+    row._cols=cols.map(v=>(v||'').replace(/^"|"$/g,'').trim());
     return row;
   });
 }
 
 function parseAndProcess(csv){
   const rows=parseCSV(csv);
-  const getDateVal=r=>
-    r['Delivery Date']||
-    r['Delivery date']||
-    r['DeliveryDate']||
-    r['Date']||
-    r['Delivery']||
-    r['Delivery Dt']||
-    '';
+  const pick=(...vals)=>vals.find(v=>String(v||'').trim())||'';
+  const col=(r,i)=>r?._cols?.[i]||'';
+  const getCounter=r=>pick(r['Mention Your Counter'],r['Counter'],col(r,2));
+  const getModel=r=>pick(r['Model'],r['Vehicle Model'],col(r,11),col(r,10));
+  const getSalesExec=r=>pick(getSP(r),r['Sales Executive Name'],col(r,8));
+  const makeGetter=token=>{
+    if(typeof token==='number') return r=>col(r,token);
+    return r=>r[token]||'';
+  };
+  const chooseDateGetter=allRows=>{
+    const tokens=[
+      'Delivery Date','Delivery date','DeliveryDate','Date','Delivery','Delivery Dt',
+      9,0,1,2,3,4,5,6,7,8,10,11,12
+    ];
+    const sample=allRows.slice(0,Math.min(allRows.length,5000));
+    let best={token:9,april:0,valid:0};
+    tokens.forEach(t=>{
+      const g=makeGetter(t);
+      let valid=0,april=0;
+      for(const r of sample){
+        const d=pDate(g(r));
+        if(!d) continue;
+        valid++;
+        if(d.getMonth()===3) april++;
+      }
+      if(april>best.april || (april===best.april && valid>best.valid)){
+        best={token:t,april,valid};
+      }
+    });
+    return makeGetter(best.token);
+  };
+  const chosenDateGetter=chooseDateGetter(rows);
+  const getDateVal=r=>pick(
+    chosenDateGetter(r),
+    r['Delivery Date'],
+    r['Delivery date'],
+    r['DeliveryDate'],
+    r['Date'],
+    r['Delivery'],
+    r['Delivery Dt'],
+    col(r,9),
+    col(r,0)
+  );
   RAW=rows.filter(r=>{
-    const c=(r['Mention Your Counter']||'').trim();
+    const c=getCounter(r).trim();
     return c&&c!=='Tax Invoice';
-  }).map(r=>({...r,_d:pDate(getDateVal(r)),_sr:(r['Mention Your Counter']||'').trim(),_m:(r['Model']||'').trim(),_sp:getSP(r).trim()}));
+  }).map(r=>({...r,_d:pDate(getDateVal(r)),_sr:getCounter(r).trim(),_m:getModel(r).trim(),_sp:getSalesExec(r).trim()}));
 
   const aprilRows=RAW.filter(r=>r._d&&r._d.getMonth()===3);
   const years=[...new Set(aprilRows.map(r=>r._d.getFullYear()))].sort((a,b)=>a-b);
@@ -534,8 +571,13 @@ function parseAndProcess(csv){
   APR=aprilRows.filter(r=>r._d.getFullYear()===APR_YEAR);
   const total=RAW.length;
   document.getElementById('rowCount').textContent=`${total.toLocaleString()} total rows · ${APR.length} in April ${APR_YEAR}`;
-  setStatus('live',`<b>Live</b> — Last fetched ${new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}`,`${APR.length} April rows`);
-  notice('');
+  if(APR.length===0){
+    setStatus('error',`No April rows parsed`,`Check date/counter columns in sheet`);
+    notice('No April records could be parsed from the live sheet. Verify date and counter columns.');
+  }else{
+    setStatus('live',`<b>Live</b> — Last fetched ${new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}`,`${APR.length} April rows`);
+    notice('');
+  }
 }
 
 // ═══════════════════════════════════════════════════════════
